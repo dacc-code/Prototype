@@ -41,6 +41,8 @@ class _DetectionScreenState extends State<DetectionScreen> {
   Map<String, dynamic>? _prediction;
   bool _isModelLoaded = false;
   bool _isProcessing = false;
+  bool _hasError = false;
+  String _errorMessage = '';
 
   @override
   void initState() {
@@ -60,6 +62,12 @@ class _DetectionScreenState extends State<DetectionScreen> {
         _runInference(image);
       }
     });
+
+    if (!_cameraService.isInitialized) {
+      _hasError = true;
+      _errorMessage = "No se pudo iniciar la cámara o no hay permisos.";
+    }
+
     setState(() {});
   }
 
@@ -82,6 +90,21 @@ class _DetectionScreenState extends State<DetectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_hasError) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              _errorMessage,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red, fontSize: 18),
+            ),
+          ),
+        ),
+      );
+    }
+
     if (!_cameraService.isInitialized) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),

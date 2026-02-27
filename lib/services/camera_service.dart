@@ -19,7 +19,7 @@ class CameraService {
       cameras[0],
       ResolutionPreset.medium,
       enableAudio: false,
-      imageFormatGroup: ImageFormatGroup.bgra8888,
+      imageFormatGroup: ImageFormatGroup.yuv420,
     );
 
     try {

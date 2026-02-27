@@ -1,0 +1,29 @@
+name: mango_disease_detector
+description: Real-time mango leaf disease detection app using TFLite.
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  camera: ^0.10.5+5
+  tflite_flutter: ^0.12.1
+  image: ^4.1.3
+  permission_handler: ^11.0.1
+  path_provider: ^2.1.1
+  path: ^1.8.3
+
+dependency_overrides:
+  typed_data: ^1.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/models/best_float32.tflite

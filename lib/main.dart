@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:mango_disease_detector/services/camera_service.dart';
 import 'package:mango_disease_detector/services/tflite_service.dart';
 import 'package:mango_disease_detector/widgets/result_overlay.dart';
+import 'package:mango_disease_detector/widgets/debug_console.dart';
+import 'package:mango_disease_detector/services/log_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,6 +53,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
   }
 
   Future<void> _initialize() async {
+    logger.addLog('Iniciando aplicación. Buscando permisos y cámara...');
     await _tfliteService.loadModel();
     setState(() {
       _isModelLoaded = true;
@@ -143,6 +146,12 @@ class _DetectionScreenState extends State<DetectionScreen> {
                 ),
               ),
             ),
+          ),
+
+          // Debug Console (Always visible at the bottom)
+          const Align(
+            alignment: Alignment.bottomCenter,
+            child: DebugConsole(),
           ),
         ],
       ),

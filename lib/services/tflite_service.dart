@@ -5,7 +5,7 @@ import 'log_service.dart';
 
 class TFLiteService {
   Interpreter? _interpreter;
-  List<String> _labels = [
+  final List<String> _labels = [
     'Sano',
     'Antracnosis',
     'Mancha Bacteriana',

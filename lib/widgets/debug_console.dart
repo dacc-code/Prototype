@@ -12,7 +12,7 @@ class DebugConsole extends StatelessWidget {
         if (logs.isEmpty) return const SizedBox.shrink();
 
         return Container(
-          color: Colors.black.withOpacity(0.7),
+          color: Colors.black.withValues(alpha: 0.7),
           padding: const EdgeInsets.all(8.0),
           width: double.infinity,
           height: 200, // Fixed height at the bottom

@@ -9,7 +9,7 @@ class LogService {
   final ValueNotifier<List<String>> logs = ValueNotifier<List<String>>([]);
 
   void addLog(String message) {
-    print(message); // Still print to real console
+    debugPrint(message); // Still print to real console
     final timestamp =
         DateTime.now().toIso8601String().split('T')[1].substring(0, 8);
     final logMessage = '[$timestamp] $message';

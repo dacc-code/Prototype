@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/camera_service.dart';
 import '../services/model_service.dart';
 import '../models/detection.dart';
@@ -19,6 +21,7 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver {
   final CameraService _cameraService = CameraService();
   final ModelService _modelService = ModelService();
+  final ImagePicker _imagePicker = ImagePicker();
   
   bool _isLoading = true;
   bool _isDetecting = false;
@@ -301,7 +304,55 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 ),
               ),
             ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).padding.bottom + 80,
+                top: 20,
+                left: 20,
+                right: 20,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildActionButton(
+                    icon: Icons.photo_library,
+                    label: 'Galería',
+                    onPressed: _pickImageFromGallery,
+                  ),
+                  _buildActionButton(
+                    icon: Icons.camera_alt,
+                    label: 'Cámara',
+                    onPressed: _takePhoto,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white.withOpacity(0.2),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
       ),
     );
   }
@@ -316,5 +367,87 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         ),
       ),
     );
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(source: ImageSource.gallery);
+      if (image != null) {
+        final bytes = await File(image.path).readAsBytes();
+        final base64Image = base64Encode(bytes);
+        
+        setState(() {
+          _isLoading = true;
+        });
+
+        final detections = await _modelService.detect(bytes);
+        
+        if (mounted) {
+          setState(() {
+            _detections = detections;
+            _currentImageBase64 = base64Image;
+            _isLoading = false;
+          });
+          
+          if (detections.isNotEmpty) {
+            _showResults();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No se detectaron enfermedades en la imagen')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al procesar imagen: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(source: ImageSource.camera);
+      if (image != null) {
+        final bytes = await File(image.path).readAsBytes();
+        final base64Image = base64Encode(bytes);
+        
+        setState(() {
+          _isLoading = true;
+        });
+
+        final detections = await _modelService.detect(bytes);
+        
+        if (mounted) {
+          setState(() {
+            _detections = detections;
+            _currentImageBase64 = base64Image;
+            _isLoading = false;
+          });
+          
+          if (detections.isNotEmpty) {
+            _showResults();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No se detectaron enfermedades en la imagen')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al procesar imagen: $e')),
+        );
+      }
+    }
   }
 }

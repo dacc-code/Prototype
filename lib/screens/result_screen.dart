@@ -44,13 +44,13 @@ class _ResultScreenState extends State<ResultScreen> {
               ),
             ),
           Expanded(
-            child: detections.isEmpty
+            child: widget.detections.isEmpty
                 ? const Center(
                     child: Text('No se detectaron enfermedades'),
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: detections.length,
+                    itemCount: widget.detections.length,
                     itemBuilder: (context, index) {
                       final detection = detections[index];
                       final diseaseInfo = DiseaseInfo.getInfo(detection.label);

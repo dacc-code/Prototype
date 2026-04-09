@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:tflite_flutter_custom/tflite_flutter_custom.dart';
+import 'package:tflite_flutter_custom/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 import '../models/detection.dart';
 

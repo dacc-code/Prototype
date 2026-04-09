@@ -30,6 +30,11 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
+      - name: Setup Gradle
+        run: |
+          cd android
+          curl -L -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.11.1/gradle/wrapper/gradle-wrapper.jar
+
       - name: Clean Build
         run: flutter clean
 

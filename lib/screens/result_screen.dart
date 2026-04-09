@@ -235,20 +235,7 @@ class _ResultScreenState extends State<ResultScreen> {
       ),
     );
   }
-
-  Color _getSeverityColor(String severity) {
-    switch (severity) {
-      case 'alta':
-        return Colors.red;
-      case 'media':
-        return Colors.orange;
-      case 'baja':
-        return Colors.amber;
-      case 'ninguna':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
+}
   }
 
   Color _getColorForSeverity(String severity) {
@@ -279,40 +266,7 @@ class _ResultScreenState extends State<ResultScreen> {
       default:
         return Icons.eco;
     }
-    }
-  }
-
-  Color _getColorForSeverity(String severity) {
-    switch (severity) {
-      case 'alta':
-        return Colors.red.shade700;
-      case 'media':
-        return Colors.orange.shade700;
-      case 'baja':
-        return Colors.amber.shade700;
-      case 'ninguna':
-        return Colors.green.shade700;
-      default:
-        return Colors.grey.shade700;
-    }
-  }
-
-  IconData _getIconForLabel(String label) {
-    switch (label) {
-      case 'healthy':
-        return Icons.check_circle;
-      case 'leaf_spot':
-        return Icons.blur_on;
-      case 'root_rot':
-        return Icons.warning;
-      case 'yellow_leaf':
-        return Icons.wb_sunny;
-      case 'brown_spots':
-        return Icons.grain;
-      case 'leaf_blight':
-        return Icons.local_florist;
-      default:
-        return Icons.help;
-    }
   }
 }
+
+  Color _getSeverityColor(String severity) {

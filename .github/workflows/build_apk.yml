@@ -33,7 +33,8 @@ jobs:
       - name: Setup Gradle Wrapper
         run: |
           mkdir -p android/gradle/wrapper
-          curl -sL https://github.com/nicoulaj/gradle-wrapper/releases/download/v8.11.1/gradle-wrapper.jar -o android/gradle/wrapper/gradle-wrapper.jar
+          curl -sL https://raw.githubusercontent.com/nicoulaj/gradle-wrapper/main/gradle-wrapper.jar -o android/gradle/wrapper/gradle-wrapper.jar || \
+          curl -sL https://github.com/nicoulaj/gradle-wrapper/raw/refs/heads/main/gradle-wrapper.jar -o android/gradle/wrapper/gradle-wrapper.jar
 
       - name: Get Dependencies
         run: flutter pub get

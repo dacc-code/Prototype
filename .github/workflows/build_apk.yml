@@ -33,18 +33,10 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
-      - name: Make Gradle Executable
-        run: chmod +x android/gradlew
-
-      - name: Ensure Gradle Wrapper
+      - name: Build APK (Release) with Gradle
         run: |
-          mkdir -p android/gradle/wrapper
-          curl -sL -o android/gradle/wrapper/gradle-wrapper.jar "https://raw.githubusercontent.com/nicoulaj/gradle-wrapper/refs/heads/main/gradle-wrapper.jar" || \
-          curl -sL -o android/gradle/wrapper/gradle-wrapper.jar "https://github.com/nicoulaj/gradle-wrapper/raw/refs/heads/main/gradle-wrapper.jar"
-          file android/gradle/wrapper/gradle-wrapper.jar
-
-      - name: Build APK (Release)
-        run: flutter build apk --release
+          export PATH="/opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64/bin:$PATH"
+          cd android && ./gradlew assembleRelease --no-daemon || gradle assembleRelease
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4

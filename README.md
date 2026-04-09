@@ -23,7 +23,7 @@ flutter pub get
 
 3. **Agregar el modelo YOLO**
    - Descarga tu modelo YOLO exportado a TFLite
-   - Colócalo en `assets/yolov5s.tflite`
+   - Colócalo en `assets/best_float32.tflite`
 
 4. **Ejecutar**
 ```bash

@@ -52,7 +52,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: widget.detections.length,
                     itemBuilder: (context, index) {
-                      final detection = detections[index];
+                      final detection = widget.detections[index];
                       final diseaseInfo = DiseaseInfo.getInfo(detection.label);
                       
                       return Card(

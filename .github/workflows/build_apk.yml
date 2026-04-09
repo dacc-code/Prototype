@@ -39,10 +39,8 @@ jobs:
       - name: Ensure Gradle Wrapper
         run: |
           mkdir -p android/gradle/wrapper
-          curl -sL "https://github.com/nicoulaj/gradle-wrapper/raw/refs/heads/main/gradle-wrapper.jar" -o android/gradle/wrapper/gradle-wrapper.jar --fail || \
-          curl -sL "https://github.com/nicoulaj/gradle-wrapper/releases/latest/download/gradle-wrapper.jar" -o android/gradle/wrapper/gradle-wrapper.jar --fail || \
-          curl -sL "https://github.com/nicoulaj/gradle-wrapper/raw/refs/heads/main/gradle-wrapper.jar" -o android/gradle/wrapper/gradle-wrapper.jar
-          ls -la android/gradle/wrapper/
+          curl -sL -o android/gradle/wrapper/gradle-wrapper.jar "https://raw.githubusercontent.com/nicoulaj/gradle-wrapper/refs/heads/main/gradle-wrapper.jar" || \
+          curl -sL -o android/gradle/wrapper/gradle-wrapper.jar "https://github.com/nicoulaj/gradle-wrapper/raw/refs/heads/main/gradle-wrapper.jar"
           file android/gradle/wrapper/gradle-wrapper.jar
 
       - name: Build APK (Release)

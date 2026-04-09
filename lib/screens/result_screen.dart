@@ -275,11 +275,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
     try {
       for (final detection in widget.detections) {
-        final payload = detection.toApiPayload();
-        if (widget.imageBase64 != null) {
-          payload['imagen'] = widget.imageBase64;
-        }
-        await ApiService.sendDetection(payload);
+        await ApiService.sendDetection(detection, widget.imageBase64 ?? '');
       }
       setState(() {
         _sent = true;

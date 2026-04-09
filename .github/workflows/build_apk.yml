@@ -40,7 +40,7 @@ jobs:
         run: |
           curl -sL "https://services.gradle.org/distributions/gradle-8.11.1-bin.zip" -o /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /tmp
-          cp /tmp/gradle-8.11.1/lib/gradle-wrapper.jar android/gradle/wrapper/gradle-wrapper.jar 2>/dev/null || true
+          find /tmp/gradle-8.11.1 -name "gradle-wrapper.jar" -exec cp {} android/gradle/wrapper/gradle-wrapper.jar \;
           ls -la android/gradle/wrapper/
 
       - name: Build APK (Release)

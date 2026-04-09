@@ -1,5 +1,4 @@
 import 'dart:convert';
-// Force rebuild
 import 'package:flutter/material.dart';
 import '../models/detection.dart';
 import '../services/api_service.dart';
@@ -212,10 +211,10 @@ class _ResultScreenState extends State<ResultScreen> {
                       style: const TextStyle(color: Colors.red),
                     ),
                   ),
-                  SizedBox(
+                SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: null,
+                    onPressed: _sent ? null : _sendToApi,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1B5E20),
                       foregroundColor: Colors.white,
@@ -224,8 +223,8 @@ class _ResultScreenState extends State<ResultScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    icon: const Icon(Icons.cloud_upload),
-                    label: const Text('Enviar al Dashboard'),
+                    icon: Icon(_sent ? Icons.check : Icons.cloud_upload),
+                    label: Text(_sent ? 'Enviado' : 'Enviar al Dashboard'),
                   ),
                 ),
               ],
@@ -234,8 +233,6 @@ class _ResultScreenState extends State<ResultScreen> {
         ],
       ),
     );
-  }
-}
   }
 
   Color _getColorForSeverity(String severity) {
@@ -267,6 +264,32 @@ class _ResultScreenState extends State<ResultScreen> {
         return Icons.eco;
     }
   }
-}
 
-  Color _getSeverityColor(String severity) {
+  Future<void> _sendToApi() async {
+    if (_sent || _isSending) return;
+
+    setState(() {
+      _isSending = true;
+      _sendError = null;
+    });
+
+    try {
+      for (final detection in widget.detections) {
+        final payload = detection.toApiPayload();
+        if (widget.imageBase64 != null) {
+          payload['imagen'] = widget.imageBase64;
+        }
+        await ApiService.sendDetection(payload);
+      }
+      setState(() {
+        _sent = true;
+        _isSending = false;
+      });
+    } catch (e) {
+      setState(() {
+        _sendError = 'Error al enviar: $e';
+        _isSending = false;
+      });
+    }
+  }
+}

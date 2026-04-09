@@ -30,6 +30,15 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
+      - name: Install Gradle
+        run: |
+          curl -sL https://services.gradle.org/distributions/gradle-8.11.1-bin.zip -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp
+          echo "/tmp/gradle-8.11.1/bin" >> $GITHUB_PATH
+
+      - name: Setup Gradle Wrapper
+        run: cd android && gradle wrapper
+
       - name: Clean Build
         run: flutter clean && flutter pub get
 

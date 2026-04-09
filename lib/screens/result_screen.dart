@@ -211,35 +211,20 @@ class _ResultScreenState extends State<ResultScreen> {
                       style: const TextStyle(color: Colors.red),
                     ),
                   ),
-                SizedBox(
+                  SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: _sent || _isSending ? null : _sendToApi,
+                    onPressed: null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _sent ? Colors.green : const Color(0xFF1B5E20),
+                      backgroundColor: const Color(0xFF1B5E20),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    icon: _isSending
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Icon(_sent ? Icons.check : Icons.cloud_upload),
-                    label: Text(
-                      _isSending
-                          ? 'Enviando...'
-                          : _sent
-                              ? 'Enviado al Dashboard'
-                              : 'Enviar al Dashboard',
-                    ),
+                    icon: const Icon(Icons.cloud_upload),
+                    label: const Text('Enviar al Dashboard'),
                   ),
                 ),
               ],

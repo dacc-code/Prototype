@@ -30,14 +30,11 @@ jobs:
       - name: Clear Pub Cache
         run: rm -rf ~/.pub-cache
 
-      - name: Setup Gradle Wrapper
-        run: |
-          mkdir -p android/gradle/wrapper
-          curl -sL https://raw.githubusercontent.com/nicoulaj/gradle-wrapper/main/gradle-wrapper.jar -o android/gradle/wrapper/gradle-wrapper.jar || \
-          curl -sL https://github.com/nicoulaj/gradle-wrapper/raw/refs/heads/main/gradle-wrapper.jar -o android/gradle/wrapper/gradle-wrapper.jar
-
       - name: Get Dependencies
         run: flutter pub get
+
+      - name: Make Gradle Executable
+        run: chmod +x android/gradlew
 
       - name: Clean Build
         run: flutter clean

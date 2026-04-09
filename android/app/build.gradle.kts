@@ -20,7 +20,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.mangrove_disease_detector"
-        minSdk = 21
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

@@ -1,14 +1,14 @@
 # Manglares - Detector de Enfermedades
 
-Aplicación Flutter para detección de enfermedades en manglares usando YOLO en tiempo real.
+Aplicación Flutter para detección de enfermedades y especies de manglares usando YOLO en tiempo real.
 
-## 📋 Requisitos
+## Requisitos
 
 - Flutter SDK >= 3.2.0
 - Android SDK
 - Modelo YOLO en formato TFLite
 
-## 🚀 Instalación
+## Instalación
 
 1. **Clonar el proyecto**
 ```bash
@@ -30,7 +30,7 @@ flutter pub get
 flutter run
 ```
 
-## 📁 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 lib/
@@ -41,62 +41,64 @@ lib/
 │   └── result_screen.dart    # Resultados del análisis
 ├── services/
 │   ├── camera_service.dart   # Servicio de cámara
-│   └── model_service.dart    # Servicio del modelo TFLite
+│   ├── model_service.dart    # Servicio del modelo TFLite
+│   └── api_service.dart      # Servicio de API para enviar detecciones
 ├── models/
-│   └── detection.dart       # Modelos de datos
+│   └── detection.dart        # Modelos de datos y enfermedades
 └── widgets/
     └── bounding_box.dart     # Widget para dibujar bounding boxes
 ```
 
-## 🎯 Enfermedades Detectables
+## Especies y Enfermedades Detectables
 
-- **Mancha Foliar (leaf_spot)**: Infección fúngica
-- **Pudrición de Raíces (root_rot)**: Hongos en raíces
-- **Amarillamiento Foliar (yellow_leaf)**: Deficiencia nutricional
-- **Manchas Marrones (brown_spots)**: Infección fúngica
-- **Tizón Foliar (leaf_blight)**: Enfermedad bacteriana
-- **Mangle Saludable (healthy)**: Sin enfermedades
+### Especies de Mangle (Saludables)
+- **Dieback-Gall**: Enfermedad que causa muerte regresiva y agallas
+- **Lumnitzera Littorea**: Especie de mangle - saludable
+- **Lumnitzera Littorea Flower**: Mangle en floración
+- **Rhizophora Apiculata**: Especie de mangle rojo
+- **Rhizophora Apiculata Propagule**: Mangle rojo en propagación
+- **Scyphiphora Hydrophyllacea**: Especie de mangle
+- **Scyphiphora Hydrophyllacea Flower**: Mangle en floración
+- **Sonneratia Alba**: Especie de mangle blanco
+- **Sonneratia Alba Flower**: Mangle blanco en floración
 
-## ⚙️ Configuración del Modelo
+### Enfermedades
+- **Black Spots** (Manchas Negras): Infección fúngica
+- **Brown Spots** (Manchas Marrones): Enfermedad fúngica
+- **White Spots** (Manchas Blancas): Infección bacterial o fúngica
 
-### Exportar YOLO a TFLite
+## Dependencias
 
-```python
-import torch
+- `camera`: Acceso a cámara
+- `tflite_flutter_custom`: Inferencia del modelo TFLite
+- `permission_handler`: Permisos de runtime
+- `http`: Comunicación con API
+- `image`: Procesamiento de imágenes
+- `path_provider`: Acceso al sistema de archivos
 
-model = torch.load('yolov5s.pt', map_location='cpu')['model'].float()
-model.eval()
+## Características
 
-# Crear input tensor
-img = torch.zeros(1, 3, 416, 416)
+- Detección en tiempo real con YOLO
+- Bounding boxes con CustomPainter
+- Optimizado con isolates para rendimiento
+- UI en español
+- Información de enfermedades y recomendaciones
+- Envío de detecciones a API externa
 
-# Exportar a TFLite
-torch_to_tflite(model, img, 'yolov5s.tflite')
-```
-
-### Ajustar clases del modelo
-
-Edita `lib/models/detection.dart` para cambiar los labels:
-
-```dart
-final labels = ['leaf_spot', 'root_rot', 'yellow_leaf', 'brown_spots', 'leaf_blight', 'healthy'];
-```
-
-## 📱 Características
-
-- ✅ Detección en tiempo real
-- ✅ Bounding boxes con CustomPainter
-- ✅ Optimizado con isolates
-- ✅ UI en español
-- ✅ Recomendaciones de tratamiento
-- ✅ Control de FPS
-
-## 🔧 Optimizaciones
+## Optimizaciones
 
 - Procesamiento en isolates (multithreading)
 - Throttling de frames para controlar FPS
 - Preprocesamiento optimizado de imágenes
 
-## 📄 Licencia
+## Configuración del Modelo
+
+Edita `lib/models/detection.dart` para modificar los labels del modelo:
+
+```dart
+final labels = ['Dieback-Gall', 'Lumnitzera-Littorea', ...];
+```
+
+## Licencia
 
 MIT License

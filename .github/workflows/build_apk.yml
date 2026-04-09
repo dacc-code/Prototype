@@ -27,14 +27,17 @@ jobs:
           flutter-version: '3.41.2'
           channel: 'stable'
 
-      - name: Get Dependencies
-        run: flutter pub get
-
       - name: Clear Pub Cache
         run: rm -rf ~/.pub-cache
 
+      - name: Get Dependencies
+        run: flutter pub get
+
       - name: Clean Build
-        run: flutter clean && flutter pub get
+        run: flutter clean
+
+      - name: Get Dependencies Again
+        run: flutter pub get
 
       - name: Build APK (Release)
         run: flutter build apk --release

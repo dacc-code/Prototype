@@ -38,10 +38,9 @@ jobs:
 
       - name: Ensure Gradle Wrapper
         run: |
-          if [ ! -f android/gradle/wrapper/gradle-wrapper.jar ]; then
-            curl -sL "https://raw.githubusercontent.com/nicoulaj/gradle-wrapper/main/gradle-wrapper.jar" -o android/gradle/wrapper/gradle-wrapper.jar || \
-            curl -sL "https://github.com/nicoulaj/gradle-wrapper/raw/refs/heads/main/gradle-wrapper.jar" -o android/gradle/wrapper/gradle-wrapper.jar
-          fi
+          curl -sL "https://services.gradle.org/distributions/gradle-8.11.1-bin.zip" -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp
+          cp /tmp/gradle-8.11.1/lib/gradle-wrapper.jar android/gradle/wrapper/gradle-wrapper.jar 2>/dev/null || true
           ls -la android/gradle/wrapper/
 
       - name: Build APK (Release)

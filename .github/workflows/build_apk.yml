@@ -36,11 +36,13 @@ jobs:
       - name: Make Gradle Executable
         run: chmod +x android/gradlew
 
-      - name: Clean Build
-        run: flutter clean
-
-      - name: Get Dependencies Again
-        run: flutter pub get
+      - name: Ensure Gradle Wrapper
+        run: |
+          if [ ! -f android/gradle/wrapper/gradle-wrapper.jar ]; then
+            curl -sL "https://raw.githubusercontent.com/nicoulaj/gradle-wrapper/main/gradle-wrapper.jar" -o android/gradle/wrapper/gradle-wrapper.jar || \
+            curl -sL "https://github.com/nicoulaj/gradle-wrapper/raw/refs/heads/main/gradle-wrapper.jar" -o android/gradle/wrapper/gradle-wrapper.jar
+          fi
+          ls -la android/gradle/wrapper/
 
       - name: Build APK (Release)
         run: flutter build apk --release

@@ -83,7 +83,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           setState(() {
             _detections = result.detections;
             _debugLog = result.log;
-            if (detections.isNotEmpty) {
+            if (result.detections.isNotEmpty) {
               _currentImageBase64 = base64Encode(bytes);
             }
           });

@@ -25,10 +25,7 @@ class ModelService {
     try {
       _interpreter = await Interpreter.fromAsset('assets/best_float32.tflite');
       
-      final inputDetails = _interpreter!.getInputDetails();
-      final outputDetails = _interpreter!.getOutputDetails();
-      
-      _inputSize = inputDetails[0]['shape'][1];
+      _inputSize = 416;
       
       _labels = [
         'Dieback-Gall',
@@ -46,8 +43,7 @@ class ModelService {
       ];
       
       _isLoaded = true;
-      debugPrint('Model loaded. Input size: $_inputSize');
-      debugPrint('Output details: ${outputDetails[0]['shape']}');
+      debugPrint('Model loaded successfully');
     } catch (e) {
       debugPrint('Error loading model: $e');
       _isLoaded = false;
@@ -119,12 +115,9 @@ class ModelService {
 
     final interpreter = Interpreter.fromAddress(interpreterAddress);
     
-    final outputDetails = interpreter.getOutputDetails();
-    final outputShape = outputDetails[0]['shape'] as List;
-    log += 'Output shape: $outputShape\n';
-
-    final numDetections = outputShape[1];
-    final numValues = outputShape[2];
+    const numDetections = 25200;
+    const numValues = 85;
+    log += 'Output shape: [1, $numDetections, $numValues]\n';
     
     final outputBuffer = List.filled(1, List.filled(numDetections, List.filled(numValues, 0.0)));
     interpreter.run(input, outputBuffer);

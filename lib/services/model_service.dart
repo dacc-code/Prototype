@@ -72,23 +72,23 @@ class ModelService {
 
   static List<List<double>> _preprocessImage(img.Image image, int size) {
     final input = List.generate(
-      1,
-      (_) => List.generate(
-        3,
-        (_) => List.generate(size, (_) => 0.0),
+      size,
+      (y) => List.generate(
+        size,
+        (x) {
+          final pixel = image.getPixel(x, y);
+          return [pixel.r / 255.0, pixel.g / 255.0, pixel.b / 255.0];
+        },
       ),
     );
 
-    for (int y = 0; y < size; y++) {
-      for (int x = 0; x < size; x++) {
-        final pixel = image.getPixel(x, y);
-        input[0][0][y][x] = pixel.r / 255.0;
-        input[0][1][y][x] = pixel.g / 255.0;
-        input[0][2][y][x] = pixel.b / 255.0;
-      }
-    }
+    final transposed = [
+      List<double>.from(input.map((row) => row[0])),
+      List<double>.from(input.map((row) => row[1])),
+      List<double>.from(input.map((row) => row[2])),
+    ];
 
-    return input[0];
+    return transposed;
   }
 
   static List<Detection> _postProcess(

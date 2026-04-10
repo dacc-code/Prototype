@@ -6,6 +6,13 @@ import 'package:tflite_flutter_custom/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 import '../models/detection.dart';
 
+class DetectionResult {
+  final List<Detection> detections;
+  final String log;
+
+  DetectionResult({required this.detections, required this.log});
+}
+
 class ModelService {
   Interpreter? _interpreter;
   bool _isLoaded = false;
@@ -38,6 +45,22 @@ class ModelService {
     } catch (e) {
       debugPrint('Detection error: $e');
       return [];
+    }
+  }
+
+  Future<DetectionResult> detectWithDebug(Uint8List imageBytes) async {
+    if (_interpreter == null || !_isLoaded) {
+      return DetectionResult(detections: [], log: 'Modelo no cargado');
+    }
+
+    try {
+      return await compute(_runInferenceWithDebug, {
+        'imageBytes': imageBytes,
+        'interpreterAddress': _interpreter!.address,
+      });
+    } catch (e) {
+      debugPrint('Detection error: $e');
+      return DetectionResult(detections: [], log: 'Error: $e');
     }
   }
 
@@ -169,6 +192,44 @@ class ModelService {
     final union = a.width * a.height + b.width * b.height - intersection;
 
     return (intersection / union).clamp(0.0, 1.0);
+  }
+
+  static DetectionResult _runInferenceWithDebug(Map<String, dynamic> params) {
+    final Uint8List imageBytes = params['imageBytes'];
+    final int interpreterAddress = params['interpreterAddress'];
+    final interpreter = Interpreter.fromAddress(interpreterAddress);
+    final int inputSize = 416;
+    final double confidenceThreshold = 0.3;
+
+    String log = '';
+
+    final image = img.decodeImage(imageBytes);
+    if (image == null) {
+      return DetectionResult(detections: [], log: 'No se pudo decodificar imagen');
+    }
+
+    log += 'Imagen: ${image.width}x${image.height}\n';
+
+    final resized = img.copyResize(image, width: inputSize, height: inputSize);
+    log += 'Resize: ${resized.width}x${resized.height}\n';
+
+    final input = _preprocessImage(resized, inputSize);
+    log += 'Input: [3, $inputSize, $inputSize]\n';
+
+    final outputBuffer = List.filled(1, List.filled(25200, List.filled(85, 0.0)));
+    interpreter.run(input, outputBuffer);
+    log += 'Output: ${outputBuffer[0].length} predictions\n';
+
+    final detections = _postProcess(outputBuffer[0], confidenceThreshold, image.width, image.height);
+    log += 'Detecciones: ${detections.length}\n';
+
+    if (detections.isNotEmpty) {
+      for (var d in detections.take(3)) {
+        log += '- ${d.label}: ${(d.confidence * 100).toStringAsFixed(1)}%\n';
+      }
+    }
+
+    return DetectionResult(detections: detections, log: log);
   }
 
   void dispose() {

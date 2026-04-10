@@ -31,6 +31,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   DateTime _lastFrameTime = DateTime.now();
   int _frameCount = 0;
   String? _currentImageBase64;
+  String _debugLog = '';
+  bool _showDebug = false;
 
   @override
   void initState() {
@@ -73,10 +75,14 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     try {
       final bytes = _convertCameraImage(image);
       if (bytes != null) {
-        final detections = await _modelService.detect(bytes);
+        setState(() => _debugLog = 'Procesando imagen...');
+        
+        final result = await _modelService.detectWithDebug(bytes);
+        
         if (mounted) {
           setState(() {
-            _detections = detections;
+            _detections = result.detections;
+            _debugLog = result.log;
             if (detections.isNotEmpty) {
               _currentImageBase64 = base64Encode(bytes);
             }
@@ -85,6 +91,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       }
     } catch (e) {
       debugPrint('Error processing image: $e');
+      setState(() => _debugLog = 'Error: $e');
     } finally {
       _isDetecting = false;
     }
@@ -247,7 +254,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                       ),
                     ),
                   ),
-                  Container(
+                    Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: _detections.isEmpty 
@@ -263,10 +270,36 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: Icon(_showDebug ? Icons.expand_less : Icons.expand_more, color: Colors.white),
+                    onPressed: () => setState(() => _showDebug = !_showDebug),
+                  ),
                 ],
               ),
             ),
           ),
+          if (_showDebug && _debugLog.isNotEmpty)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 60,
+              left: 10,
+              right: 10,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _debugLog,
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+            ),
           if (_detections.isNotEmpty)
             Positioned(
               bottom: 0,
@@ -378,18 +411,20 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         
         setState(() {
           _isLoading = true;
+          _debugLog = 'Procesando...';
         });
 
-        final detections = await _modelService.detect(bytes);
+        final result = await _modelService.detectWithDebug(bytes);
         
         if (mounted) {
           setState(() {
-            _detections = detections;
+            _detections = result.detections;
             _currentImageBase64 = base64Image;
             _isLoading = false;
+            _debugLog = result.log;
           });
           
-          if (detections.isNotEmpty) {
+          if (result.detections.isNotEmpty) {
             _showResults();
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -419,18 +454,20 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         
         setState(() {
           _isLoading = true;
+          _debugLog = 'Procesando...';
         });
 
-        final detections = await _modelService.detect(bytes);
+        final result = await _modelService.detectWithDebug(bytes);
         
         if (mounted) {
           setState(() {
-            _detections = detections;
+            _detections = result.detections;
             _currentImageBase64 = base64Image;
             _isLoading = false;
+            _debugLog = result.log;
           });
           
-          if (detections.isNotEmpty) {
+          if (result.detections.isNotEmpty) {
             _showResults();
           } else {
             ScaffoldMessenger.of(context).showSnackBar(

@@ -46,18 +46,28 @@ class ModelService {
     final int interpreterAddress = params['interpreterAddress'];
     final interpreter = Interpreter.fromAddress(interpreterAddress);
     final int inputSize = 416;
-    final double confidenceThreshold = 0.5;
+    final double confidenceThreshold = 0.3;
 
     final image = img.decodeImage(imageBytes);
     if (image == null) return [];
 
+    debugPrint('Image decoded: ${image.width}x${image.height}');
+
     final resized = img.copyResize(image, width: inputSize, height: inputSize);
+    debugPrint('Image resized to: ${resized.width}x${resized.height}');
+
     final input = _preprocessImage(resized, inputSize);
+    debugPrint('Input shape: [1, 3, $inputSize, $inputSize]');
 
-    final output = List.filled(1, List.filled(25200, List.filled(85, 0.0)));
-    interpreter.run(input, output);
+    final outputBuffer = List.filled(1, List.filled(25200, List.filled(85, 0.0)));
+    interpreter.run(input, outputBuffer);
 
-    return _postProcess(output[0], confidenceThreshold, image.width, image.height);
+    debugPrint('Output shape: ${outputBuffer.length}x${outputBuffer[0].length}x${outputBuffer[0][0].length}');
+
+    final detections = _postProcess(outputBuffer[0], confidenceThreshold, image.width, image.height);
+    debugPrint('Found ${detections.length} detections');
+
+    return detections;
   }
 
   static List<List<double>> _preprocessImage(img.Image image, int size) {
@@ -72,13 +82,13 @@ class ModelService {
     for (int y = 0; y < size; y++) {
       for (int x = 0; x < size; x++) {
         final pixel = image.getPixel(x, y);
-        input[0][0][y * size + x] = pixel.r / 255.0;
-        input[0][1][y * size + x] = pixel.g / 255.0;
-        input[0][2][y * size + x] = pixel.b / 255.0;
+        input[0][0][y][x] = pixel.r / 255.0;
+        input[0][1][y][x] = pixel.g / 255.0;
+        input[0][2][y][x] = pixel.b / 255.0;
       }
     }
 
-    return input[0].map((channel) => channel.toList()).toList();
+    return input[0];
   }
 
   static List<Detection> _postProcess(

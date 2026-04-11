@@ -21,19 +21,26 @@ class ModelService {
 
   Future<void> loadModel() async {
     try {
+      debugPrint('=== INICIANDO CARGA DE MODELO ===');
       _interpreter = await Interpreter.fromAsset('assets/best_float32.tflite');
+      debugPrint('Modelo cargado desde asset');
       
       final inputTensors = _interpreter!.getInputTensors();
-      final outputTensors = _interpreter!.getOutputTensors();
+      debugPrint('Input tensors obtenidos: ${inputTensors.length}');
       
-      debugPrint('=== MODEL DEBUG ===');
-      debugPrint('Input tensors: ${inputTensors.map((t) => '${t.name}: shape=${t.shape}, type=${t.type}').join(', ')}');
-      debugPrint('Output tensors: ${outputTensors.map((t) => '${t.name}: shape=${t.shape}, type=${t.type}').join(', ')}');
-      debugPrint('===================');
+      final outputTensors = _interpreter!.getOutputTensors();
+      debugPrint('Output tensors obtenidos: ${outputTensors.length}');
+      
+      for (var t in inputTensors) {
+        debugPrint('INPUT: name=${t.name}, shape=${t.shape}, type=${t.type}');
+      }
+      for (var t in outputTensors) {
+        debugPrint('OUTPUT: name=${t.name}, shape=${t.shape}, type=${t.type}');
+      }
       
       if (inputTensors.isNotEmpty) {
         _inputSize = inputTensors[0].shape[1];
-        debugPrint('Input size detectado: $_inputSize');
+        debugPrint('Input size configurado: $_inputSize');
       }
       
       _labels = [
@@ -52,9 +59,10 @@ class ModelService {
       ];
       
       _isLoaded = true;
-      debugPrint('Model loaded successfully');
-    } catch (e) {
-      debugPrint('Error loading model: $e');
+      debugPrint('=== MODELO CARGADO EXITOSAMENTE ===');
+    } catch (e, st) {
+      debugPrint('Error cargando modelo: $e');
+      debugPrint('Stack: $st');
       _isLoaded = false;
     }
   }
@@ -89,7 +97,8 @@ class ModelService {
     }
 
     try {
-      String log = 'Iniciando detección...\n';
+      String log = '';
+      log += '=== INICIANDO DETECCION ===\n';
 
       final image = img.decodeImage(imageBytes);
       if (image == null) {
@@ -103,17 +112,19 @@ class ModelService {
       
       final inputTensors = _interpreter!.getInputTensors();
       final expectedShape = inputTensors[0].shape;
-      log += 'Expected input shape: $expectedShape\n';
-      log += 'Expected input type: ${inputTensors[0].type}\n';
+      log += 'Expected shape: $expectedShape\n';
+      log += 'Expected type: ${inputTensors[0].type}\n';
+      debugPrint('Expected shape por modelo: $expectedShape');
       
       final outputTensors = _interpreter!.getOutputTensors();
       final outputShape = outputTensors[0].shape;
-      log += 'Expected output shape: $outputShape\n';
+      log += 'Output shape: $outputShape\n';
+      debugPrint('Expected output por modelo: $outputShape');
       
       final actualInputSize = expectedShape[1];
       final channels = expectedShape[3];
       
-      log += 'Creando input con shape: [1, $actualInputSize, $actualInputSize, $channels]\n';
+      log += 'Creando input [1,$actualInputSize,$actualInputSize,$channels]\n';
 
       final input = List.generate(
         actualInputSize,
@@ -122,33 +133,35 @@ class ModelService {
 
       for (int y = 0; y < actualInputSize; y++) {
         for (int x = 0; x < actualInputSize; x++) {
-          if (x < resized.width && y < resized.height) {
-            final pixel = resized.getPixel(x, y);
-            input[y][x][0] = pixel.r / 255.0;
-            input[y][x][1] = pixel.g / 255.0;
-            input[y][x][2] = pixel.b / 255.0;
-          } else {
-            input[y][x][0] = 128.0 / 255.0;
-            input[y][x][1] = 128.0 / 255.0;
-            input[y][x][2] = 128.0 / 255.0;
-          }
+          final pixel = resized.getPixel(x, y);
+          input[y][x][0] = pixel.r / 255.0;
+          input[y][x][1] = pixel.g / 255.0;
+          input[y][x][2] = pixel.b / 255.0;
         }
       }
       
-      log += 'Input[0][0][0] = ${input[0][0][0]}\n';
-      log += 'Input[0][0][1] = ${input[0][0][1]}\n';
-      log += 'Input[0][0][2] = ${input[0][0][2]}\n';
-      log += 'Input[${actualInputSize-1}][${actualInputSize-1}] = ${input[actualInputSize-1][actualInputSize-1]}\n';
+      log += 'Input[0,0,0-2]=[${input[0][0][0]},[${input[0][0][1]},[${input[0][0][2]}]\n';
+      debugPrint('Input primeros valores: ${input[0][0]}');
 
       final numDetections = outputShape[1];
       final numValues = outputShape[2];
-      log += 'Output buffer: [1, $numDetections, $numValues]\n';
+log += 'Output [1,$numDetections,$numValues]\n';
 
-      final output = List.filled(1, List.filled(numDetections, List.filled(numValues, 0.0)));
-
-      log += 'Ejecutando interpreter.run()...\n';
-      _interpreter!.run(input, output);
-      log += 'Interpreter.run() completado\n';
+      debugPrint('Antes de allocateTensors()');
+      _interpreter!.allocateTensors();
+      debugPrint('Despues de allocateTensors()');
+      
+      log += 'Ejecutando run()...\n';
+      debugPrint('Antes de _interpreter.run()');
+      try {
+        _interpreter!.invoke('serving_default', input, output);
+        debugPrint('invoke() completado!');
+      } on dynamic catch (e, st) {
+        debugPrint('ERROR en invoke(): $e');
+        debugPrint('Stack: $st');
+        return DetectionResult(detections: [], log: '$log\nError en invoke(): $e');
+      }
+      log += 'run() completado!\n';
 
       log += 'Procesando $numDetections detecciones...\n';
 

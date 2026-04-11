@@ -23,7 +23,18 @@ class ModelService {
     try {
       _interpreter = await Interpreter.fromAsset('assets/best_float32.tflite');
       
-      _inputSize = 416;
+      final inputTensors = _interpreter!.getInputTensors();
+      final outputTensors = _interpreter!.getOutputTensors();
+      
+      debugPrint('=== MODEL DEBUG ===');
+      debugPrint('Input tensors: ${inputTensors.map((t) => '${t.name}: shape=${t.shape}, type=${t.type}').join(', ')}');
+      debugPrint('Output tensors: ${outputTensors.map((t) => '${t.name}: shape=${t.shape}, type=${t.type}').join(', ')}');
+      debugPrint('===================');
+      
+      if (inputTensors.isNotEmpty) {
+        _inputSize = inputTensors[0].shape[1];
+        debugPrint('Input size detectado: $_inputSize');
+      }
       
       _labels = [
         'Dieback-Gall',
@@ -90,29 +101,54 @@ class ModelService {
       final resized = _letterboxResize(image, _inputSize);
       log += 'Resize: ${resized.width}x${resized.height}\n';
       
-      log += 'Input shape: [1, $_inputSize, $_inputSize, 3]\n';
+      final inputTensors = _interpreter!.getInputTensors();
+      final expectedShape = inputTensors[0].shape;
+      log += 'Expected input shape: $expectedShape\n';
+      log += 'Expected input type: ${inputTensors[0].type}\n';
+      
+      final outputTensors = _interpreter!.getOutputTensors();
+      final outputShape = outputTensors[0].shape;
+      log += 'Expected output shape: $outputShape\n';
+      
+      final actualInputSize = expectedShape[1];
+      final channels = expectedShape[3];
+      
+      log += 'Creando input con shape: [1, $actualInputSize, $actualInputSize, $channels]\n';
 
       final input = List.generate(
-        _inputSize,
-        (_) => List.generate(_inputSize, (_) => List.filled(3, 0.0)),
+        actualInputSize,
+        (_) => List.generate(actualInputSize, (_) => List.filled(channels, 0.0)),
       );
 
-      for (int y = 0; y < _inputSize; y++) {
-        for (int x = 0; x < _inputSize; x++) {
-          final pixel = resized.getPixel(x, y);
-          input[y][x][0] = pixel.r / 255.0;
-          input[y][x][1] = pixel.g / 255.0;
-          input[y][x][2] = pixel.b / 255.0;
+      for (int y = 0; y < actualInputSize; y++) {
+        for (int x = 0; x < actualInputSize; x++) {
+          if (x < resized.width && y < resized.height) {
+            final pixel = resized.getPixel(x, y);
+            input[y][x][0] = pixel.r / 255.0;
+            input[y][x][1] = pixel.g / 255.0;
+            input[y][x][2] = pixel.b / 255.0;
+          } else {
+            input[y][x][0] = 128.0 / 255.0;
+            input[y][x][1] = 128.0 / 255.0;
+            input[y][x][2] = 128.0 / 255.0;
+          }
         }
       }
+      
+      log += 'Input[0][0][0] = ${input[0][0][0]}\n';
+      log += 'Input[0][0][1] = ${input[0][0][1]}\n';
+      log += 'Input[0][0][2] = ${input[0][0][2]}\n';
+      log += 'Input[${actualInputSize-1}][${actualInputSize-1}] = ${input[actualInputSize-1][actualInputSize-1]}\n';
 
-      const numDetections = 25200;
-      const numValues = 85;
-      log += 'Output shape: [1, $numDetections, $numValues]\n';
+      final numDetections = outputShape[1];
+      final numValues = outputShape[2];
+      log += 'Output buffer: [1, $numDetections, $numValues]\n';
 
       final output = List.filled(1, List.filled(numDetections, List.filled(numValues, 0.0)));
 
+      log += 'Ejecutando interpreter.run()...\n';
       _interpreter!.run(input, output);
+      log += 'Interpreter.run() completado\n';
 
       log += 'Procesando $numDetections detecciones...\n';
 

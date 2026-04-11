@@ -145,7 +145,9 @@ class ModelService {
 
       final numDetections = outputShape[1];
       final numValues = outputShape[2];
-log += 'Output [1,$numDetections,$numValues]\n';
+      log += 'Output [1,$numDetections,$numValues]\n';
+
+      final outputBuffer = List.filled(1, List.filled(numDetections, List.filled(numValues, 0.0)));
 
       debugPrint('Antes de allocateTensors()');
       _interpreter!.allocateTensors();
@@ -154,7 +156,7 @@ log += 'Output [1,$numDetections,$numValues]\n';
       log += 'Ejecutando run()...\n';
       debugPrint('Antes de _interpreter.run()');
       try {
-        _interpreter!.run(input, output);
+        _interpreter!.run(input, outputBuffer);
         debugPrint('run() completado!');
       } catch (e, st) {
         debugPrint('ERROR en run(): $e');
@@ -166,7 +168,7 @@ log += 'Output [1,$numDetections,$numValues]\n';
       log += 'Procesando $numDetections detecciones...\n';
 
       final detections = <Detection>[];
-      final outputData = output[0];
+      final outputData = outputBuffer[0];
 
       for (int i = 0; i < numDetections; i++) {
         final prediction = outputData[i];

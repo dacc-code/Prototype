@@ -154,21 +154,22 @@ log += 'Output [1,$numDetections,$numValues]\n';
       log += 'Ejecutando run()...\n';
       debugPrint('Antes de _interpreter.run()');
       try {
-        _interpreter!.invoke('serving_default', input, output);
-        debugPrint('invoke() completado!');
-      } on dynamic catch (e, st) {
-        debugPrint('ERROR en invoke(): $e');
+        _interpreter!.run(input, output);
+        debugPrint('run() completado!');
+      } catch (e, st) {
+        debugPrint('ERROR en run(): $e');
         debugPrint('Stack: $st');
-        return DetectionResult(detections: [], log: '$log\nError en invoke(): $e');
+        return DetectionResult(detections: [], log: '$log\nError en run(): $e');
       }
       log += 'run() completado!\n';
 
       log += 'Procesando $numDetections detecciones...\n';
 
       final detections = <Detection>[];
+      final outputData = output[0];
 
       for (int i = 0; i < numDetections; i++) {
-        final prediction = output[0][i];
+        final prediction = outputData[i];
 
         final objScore = _sigmoid(prediction[4]);
         if (objScore < 0.3) continue;

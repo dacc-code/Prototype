@@ -1,5 +1,3 @@
-import 'dart:async';
-import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter_custom/tflite_flutter.dart';
@@ -80,32 +78,7 @@ class ModelService {
     }
 
     try {
-      final result = await Isolate.run(() {
-        return _runInferenceInIsolate({
-          'imageBytes': imageBytes,
-          'inputSize': _inputSize,
-          'modelPath': 'assets/best_float32.tflite',
-        });
-      });
-      return result;
-    } catch (e) {
-      debugPrint('Detection error: $e');
-      return DetectionResult(detections: [], log: 'Error: $e');
-    }
-  }
-
-  static DetectionResult _runInferenceInIsolate(Map<String, dynamic> params) {
-    final Uint8List imageBytes = params['imageBytes'];
-    final String modelPath = params['modelPath'];
-    final int inputSize = params['inputSize'] ?? 416;
-    final double confidenceThreshold = 0.3;
-    final double iouThreshold = 0.5;
-
-    String log = '';
-
-    try {
-      final interpreter = Interpreter.fromAsset(modelPath);
-      log += 'Modelo cargado en isolate\n';
+      String log = 'Iniciando detección...\n';
 
       final image = img.decodeImage(imageBytes);
       if (image == null) {
@@ -114,18 +87,18 @@ class ModelService {
 
       log += 'Original: ${image.width}x${image.height}\n';
 
-      final resized = _letterboxResize(image, inputSize);
+      final resized = _letterboxResize(image, _inputSize);
       log += 'Resize: ${resized.width}x${resized.height}\n';
 
-      final input = _preprocessImage(resized, inputSize);
-      log += 'Input shape: [1, 3, $inputSize, $inputSize]\n';
+      final input = _preprocessImage(resized, _inputSize);
+      log += 'Input shape: [1, 3, $_inputSize, $_inputSize]\n';
 
       const numDetections = 25200;
       const numValues = 85;
       log += 'Output shape: [1, $numDetections, $numValues]\n';
 
       final outputBuffer = List.filled(1, List.filled(numDetections, List.filled(numValues, 0.0)));
-      interpreter.run(input, outputBuffer);
+      _interpreter!.run(input, outputBuffer);
 
       log += 'Procesando $numDetections detecciones...\n';
 
@@ -135,14 +108,14 @@ class ModelService {
         final prediction = outputBuffer[0][i];
 
         final objScore = _sigmoid(prediction[4]);
-        if (objScore < confidenceThreshold) continue;
+        if (objScore < 0.3) continue;
 
         final classScores = prediction.sublist(5);
         final maxScore = classScores.reduce((a, b) => a > b ? a : b);
         final classIndex = classScores.indexOf(maxScore);
         final confScore = _sigmoid(maxScore);
 
-        if (confScore < confidenceThreshold) continue;
+        if (confScore < 0.3) continue;
 
         final finalConfidence = objScore * confScore;
 
@@ -163,7 +136,7 @@ class ModelService {
 
       log += 'Antes de NMS: ${detections.length} detecciones\n';
 
-      final filtered = _nonMaxSuppression(detections, iouThreshold);
+      final filtered = _nonMaxSuppression(detections, 0.5);
       log += 'Después de NMS: ${filtered.length} detecciones\n';
 
       if (filtered.isNotEmpty) {
@@ -172,11 +145,10 @@ class ModelService {
         }
       }
 
-      interpreter.close();
       return DetectionResult(detections: filtered, log: log);
     } catch (e) {
-      log += 'Error en isolate: $e\n';
-      return DetectionResult(detections: [], log: log);
+      debugPrint('Detection error: $e');
+      return DetectionResult(detections: [], log: 'Error: $e');
     }
   }
 

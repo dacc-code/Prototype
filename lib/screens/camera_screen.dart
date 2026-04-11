@@ -362,6 +362,7 @@ class _CameraScreenState extends State<CameraScreen> {
         builder: (_) => ResultScreen(
           detections: _detections,
           imageBase64: _currentImageBase64,
+          debugLog: _debugLog,
         ),
       ),
     );

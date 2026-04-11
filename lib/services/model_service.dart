@@ -50,23 +50,6 @@ class ModelService {
     }
   }
 
-  Future<DetectionResult> detectWithDebug(Uint8List imageBytes) async {
-    if (_interpreter == null || !_isLoaded) {
-      return DetectionResult(detections: [], log: 'Modelo no cargado');
-    }
-
-    try {
-      return await compute(_runInferenceWithDebug, {
-        'imageBytes': imageBytes,
-        'interpreterAddress': _interpreter!.address,
-        'inputSize': _inputSize,
-      });
-    } catch (e) {
-      debugPrint('Detection error: $e');
-      return DetectionResult(detections: [], log: 'Error: $e');
-    }
-  }
-
   static double _sigmoid(double x) {
     return 1.0 / (1.0 + _exp(-x));
   }
@@ -91,83 +74,110 @@ class ModelService {
     }
   }
 
-  static DetectionResult _runInferenceWithDebug(Map<String, dynamic> params) {
+  Future<DetectionResult> detectWithDebug(Uint8List imageBytes) async {
+    if (_interpreter == null || !_isLoaded) {
+      return DetectionResult(detections: [], log: 'Modelo no cargado');
+    }
+
+    try {
+      final result = await Isolate.run(() {
+        return _runInferenceInIsolate({
+          'imageBytes': imageBytes,
+          'inputSize': _inputSize,
+          'modelPath': 'assets/best_float32.tflite',
+        });
+      });
+      return result;
+    } catch (e) {
+      debugPrint('Detection error: $e');
+      return DetectionResult(detections: [], log: 'Error: $e');
+    }
+  }
+
+  static DetectionResult _runInferenceInIsolate(Map<String, dynamic> params) {
     final Uint8List imageBytes = params['imageBytes'];
-    final int interpreterAddress = params['interpreterAddress'];
+    final String modelPath = params['modelPath'];
     final int inputSize = params['inputSize'] ?? 416;
     final double confidenceThreshold = 0.3;
     final double iouThreshold = 0.5;
 
     String log = '';
 
-    final image = img.decodeImage(imageBytes);
-    if (image == null) {
-      return DetectionResult(detections: [], log: 'No se pudo decodificar imagen');
-    }
+    try {
+      final interpreter = Interpreter.fromAsset(modelPath);
+      log += 'Modelo cargado en isolate\n';
 
-    log += 'Original: ${image.width}x${image.height}\n';
-
-    final resized = _letterboxResize(image, inputSize);
-    log += 'Resize: ${resized.width}x${resized.height}\n';
-
-    final input = _preprocessImage(resized, inputSize);
-    log += 'Input shape: [1, 3, $inputSize, $inputSize]\n';
-
-    final interpreter = Interpreter.fromAddress(interpreterAddress);
-    
-    const numDetections = 25200;
-    const numValues = 85;
-    log += 'Output shape: [1, $numDetections, $numValues]\n';
-    
-    final outputBuffer = List.filled(1, List.filled(numDetections, List.filled(numValues, 0.0)));
-    interpreter.run(input, outputBuffer);
-
-    log += 'Procesando $numDetections detecciones...\n';
-
-    final detections = <Detection>[];
-    
-    for (int i = 0; i < numDetections; i++) {
-      final prediction = outputBuffer[0][i];
-      
-      final objScore = _sigmoid(prediction[4]);
-      if (objScore < confidenceThreshold) continue;
-
-      final classScores = prediction.sublist(5);
-      final maxScore = classScores.reduce((a, b) => a > b ? a : b);
-      final classIndex = classScores.indexOf(maxScore);
-      final confScore = _sigmoid(maxScore);
-
-      if (confScore < confidenceThreshold) continue;
-
-      final finalConfidence = objScore * confScore;
-      
-      final cx = prediction[0];
-      final cy = prediction[1];
-      final w = prediction[2];
-      final h = prediction[3];
-
-      detections.add(Detection(
-        label: classIndex.toString(),
-        confidence: finalConfidence,
-        x: cx - w / 2,
-        y: cy - h / 2,
-        width: w,
-        height: h,
-      ));
-    }
-
-    log += 'Antes de NMS: ${detections.length} detecciones\n';
-
-    final filtered = _nonMaxSuppression(detections, iouThreshold);
-    log += 'Después de NMS: ${filtered.length} detecciones\n';
-
-    if (filtered.isNotEmpty) {
-      for (var d in filtered.take(3)) {
-        log += '- ${d.label}: ${(d.confidence * 100).toStringAsFixed(1)}%\n';
+      final image = img.decodeImage(imageBytes);
+      if (image == null) {
+        return DetectionResult(detections: [], log: 'No se pudo decodificar imagen');
       }
-    }
 
-    return DetectionResult(detections: filtered, log: log);
+      log += 'Original: ${image.width}x${image.height}\n';
+
+      final resized = _letterboxResize(image, inputSize);
+      log += 'Resize: ${resized.width}x${resized.height}\n';
+
+      final input = _preprocessImage(resized, inputSize);
+      log += 'Input shape: [1, 3, $inputSize, $inputSize]\n';
+
+      const numDetections = 25200;
+      const numValues = 85;
+      log += 'Output shape: [1, $numDetections, $numValues]\n';
+
+      final outputBuffer = List.filled(1, List.filled(numDetections, List.filled(numValues, 0.0)));
+      interpreter.run(input, outputBuffer);
+
+      log += 'Procesando $numDetections detecciones...\n';
+
+      final detections = <Detection>[];
+
+      for (int i = 0; i < numDetections; i++) {
+        final prediction = outputBuffer[0][i];
+
+        final objScore = _sigmoid(prediction[4]);
+        if (objScore < confidenceThreshold) continue;
+
+        final classScores = prediction.sublist(5);
+        final maxScore = classScores.reduce((a, b) => a > b ? a : b);
+        final classIndex = classScores.indexOf(maxScore);
+        final confScore = _sigmoid(maxScore);
+
+        if (confScore < confidenceThreshold) continue;
+
+        final finalConfidence = objScore * confScore;
+
+        final cx = prediction[0];
+        final cy = prediction[1];
+        final w = prediction[2];
+        final h = prediction[3];
+
+        detections.add(Detection(
+          label: classIndex.toString(),
+          confidence: finalConfidence,
+          x: cx - w / 2,
+          y: cy - h / 2,
+          width: w,
+          height: h,
+        ));
+      }
+
+      log += 'Antes de NMS: ${detections.length} detecciones\n';
+
+      final filtered = _nonMaxSuppression(detections, iouThreshold);
+      log += 'Después de NMS: ${filtered.length} detecciones\n';
+
+      if (filtered.isNotEmpty) {
+        for (var d in filtered.take(3)) {
+          log += '- ${d.label}: ${(d.confidence * 100).toStringAsFixed(1)}%\n';
+        }
+      }
+
+      interpreter.close();
+      return DetectionResult(detections: filtered, log: log);
+    } catch (e) {
+      log += 'Error en isolate: $e\n';
+      return DetectionResult(detections: [], log: log);
+    }
   }
 
   static img.Image _letterboxResize(img.Image image, int size) {

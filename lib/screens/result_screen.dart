@@ -6,8 +6,9 @@ import '../services/api_service.dart';
 class ResultScreen extends StatefulWidget {
   final List<Detection> detections;
   final String? imageBase64;
+  final String? debugLog;
 
-  const ResultScreen({super.key, required this.detections, this.imageBase64});
+  const ResultScreen({super.key, required this.detections, this.imageBase64, this.debugLog});
 
   @override
   State<ResultScreen> createState() => _ResultScreenState();
@@ -17,6 +18,7 @@ class _ResultScreenState extends State<ResultScreen> {
   bool _isSending = false;
   String? _sendError;
   bool _sent = false;
+  bool _showDebug = false;
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +29,14 @@ class _ResultScreenState extends State<ResultScreen> {
         backgroundColor: const Color(0xFF1B5E20),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          if (widget.debugLog != null && widget.debugLog!.isNotEmpty)
+            IconButton(
+              icon: Icon(_showDebug ? Icons.info : Icons.info_outline),
+              onPressed: () => setState(() => _showDebug = !_showDebug),
+              tooltip: 'Ver proceso de detección',
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -41,6 +51,45 @@ class _ResultScreenState extends State<ResultScreen> {
                   image: MemoryImage(base64Decode(widget.imageBase64!)),
                   fit: BoxFit.cover,
                 ),
+              ),
+            ),
+          if (_showDebug && widget.debugLog != null && widget.debugLog!.isNotEmpty)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.terminal, color: Colors.green, size: 18),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Proceso de Detección',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(color: Colors.green),
+                  Text(
+                    widget.debugLog!,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
               ),
             ),
           Expanded(

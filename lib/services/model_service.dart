@@ -89,23 +89,43 @@ class ModelService {
 
       final resized = _letterboxResize(image, _inputSize);
       log += 'Resize: ${resized.width}x${resized.height}\n';
+      
+      log += 'Input shape: [1, $_inputSize, $_inputSize, 3]\n';
 
-      final input = _preprocessImage(resized, _inputSize);
-      log += 'Input shape: [1, 3, $_inputSize, $_inputSize]\n';
+      final inputBuffer = TensorBuffer.createFixedSize(
+        [1, _inputSize, _inputSize, 3],
+        TfLiteType.float32,
+      );
+      
+      for (int y = 0; y < _inputSize; y++) {
+        for (int x = 0; x < _inputSize; x++) {
+          final idx = y * _inputSize + x;
+          final pixel = resized.getPixel(x, y);
+          inputBuffer.setValue(idx * 3 + 0, pixel.r / 255.0);
+          inputBuffer.setValue(idx * 3 + 1, pixel.g / 255.0);
+          inputBuffer.setValue(idx * 3 + 2, pixel.b / 255.0);
+        }
+      }
 
       const numDetections = 25200;
       const numValues = 85;
       log += 'Output shape: [1, $numDetections, $numValues]\n';
 
-      final outputBuffer = List.filled(1, List.filled(numDetections, List.filled(numValues, 0.0)));
-      _interpreter!.run(input, outputBuffer);
+      final outputBuffer = TensorBuffer.createFixedSize(
+        [1, numDetections, numValues],
+        TfLiteType.float32,
+      );
+
+      _interpreter!.run(inputBuffer.buffer, outputBuffer.buffer);
 
       log += 'Procesando $numDetections detecciones...\n';
 
+      final outputData = outputBuffer.getBuffer().asFloat32List();
       final detections = <Detection>[];
 
       for (int i = 0; i < numDetections; i++) {
-        final prediction = outputBuffer[0][i];
+        final baseIdx = i * numValues;
+        final prediction = List<double>.generate(numValues, (j) => outputData[baseIdx + j]);
 
         final objScore = _sigmoid(prediction[4]);
         if (objScore < 0.3) continue;

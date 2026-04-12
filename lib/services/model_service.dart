@@ -14,7 +14,9 @@ class DetectionResult {
 class ModelService {
   Interpreter? _interpreter;
   bool _isLoaded = false;
-  int _inputSize = 416;
+  int _inputSize = 640;
+  int _numDetections = 300;
+  int _numValues = 6;
   List<String> _labels = [];
 
   bool get isLoaded => _isLoaded;
@@ -25,11 +27,14 @@ class ModelService {
       _interpreter = await Interpreter.fromAsset('assets/best_float32.tflite');
       debugPrint('Modelo cargado desde asset');
       
+      _interpreter!.allocateTensors();
+      debugPrint('allocateTensors() llamado');
+      
       final inputTensors = _interpreter!.getInputTensors();
-      debugPrint('Input tensors obtenidos: ${inputTensors.length}');
+      debugPrint('Input tensors: ${inputTensors.length}');
       
       final outputTensors = _interpreter!.getOutputTensors();
-      debugPrint('Output tensors obtenidos: ${outputTensors.length}');
+      debugPrint('Output tensors: ${outputTensors.length}');
       
       for (var t in inputTensors) {
         debugPrint('INPUT: name=${t.name}, shape=${t.shape}, type=${t.type}');
@@ -40,7 +45,14 @@ class ModelService {
       
       if (inputTensors.isNotEmpty) {
         _inputSize = inputTensors[0].shape[1];
-        debugPrint('Input size configurado: $_inputSize');
+        debugPrint('Input size: $_inputSize');
+      }
+      
+      if (outputTensors.isNotEmpty) {
+        final outShape = outputTensors[0].shape;
+        _numDetections = outShape[1];
+        _numValues = outShape[2];
+        debugPrint('Output shape: [1, $_numDetections, $_numValues]');
       }
       
       _labels = [
@@ -59,35 +71,11 @@ class ModelService {
       ];
       
       _isLoaded = true;
-      debugPrint('=== MODELO CARGADO EXITOSAMENTE ===');
+      debugPrint('=== MODELO CARGADO Y TENSORES ASIGNADOS ===');
     } catch (e, st) {
       debugPrint('Error cargando modelo: $e');
       debugPrint('Stack: $st');
       _isLoaded = false;
-    }
-  }
-
-  static double _sigmoid(double x) {
-    return 1.0 / (1.0 + _exp(-x));
-  }
-
-  static double _exp(double x) {
-    if (x > 0) {
-      double result = 1.0;
-      double term = 1.0;
-      for (int i = 1; i <= 10; i++) {
-        term *= x / i;
-        result += term;
-      }
-      return result;
-    } else {
-      double result = 1.0;
-      double term = 1.0;
-      for (int i = 1; i <= 10; i++) {
-        term *= x / i;
-        result += term;
-      }
-      return result;
     }
   }
 
@@ -112,14 +100,14 @@ class ModelService {
       
       final inputTensors = _interpreter!.getInputTensors();
       final expectedShape = inputTensors[0].shape;
-      log += 'Expected shape: $expectedShape\n';
-      log += 'Expected type: ${inputTensors[0].type}\n';
-      debugPrint('Expected shape por modelo: $expectedShape');
+      final expectedType = inputTensors[0].type;
+      log += 'Expected input: shape=$expectedShape, type=$expectedType\n';
+      debugPrint('Input shape: $expectedShape');
       
       final outputTensors = _interpreter!.getOutputTensors();
       final outputShape = outputTensors[0].shape;
-      log += 'Output shape: $outputShape\n';
-      debugPrint('Expected output por modelo: $outputShape');
+      log += 'Expected output: shape=$outputShape\n';
+      debugPrint('Output shape: $outputShape');
       
       final actualInputSize = expectedShape[1];
       final channels = expectedShape[3];
@@ -140,24 +128,17 @@ class ModelService {
         }
       }
       
-      log += 'Input[0,0,0-2]=[${input[0][0][0]},[${input[0][0][1]},[${input[0][0][2]}]\n';
-      debugPrint('Input primeros valores: ${input[0][0]}');
+      log += 'Input[0,0]: [${input[0][0][0]}, ${input[0][0][1]}, ${input[0][0][2]}]\n';
+      debugPrint('Input[0,0]: ${input[0][0]}');
 
-      final numDetections = outputShape[1];
-      final numValues = outputShape[2];
-      log += 'Output [1,$numDetections,$numValues]\n';
+      final outputBuffer = List.filled(1, List.filled(_numDetections, List.filled(_numValues, 0.0)));
 
-      final outputBuffer = List.filled(1, List.filled(numDetections, List.filled(numValues, 0.0)));
+      log += 'Output buffer: [1, $_numDetections, $_numValues]\n';
 
-      debugPrint('Antes de allocateTensors()');
-      _interpreter!.allocateTensors();
-      debugPrint('Despues de allocateTensors()');
-      
-      log += 'Ejecutando run()...\n';
-      debugPrint('Antes de _interpreter.run()');
+      debugPrint('Antes de interpreter.run()');
       try {
         _interpreter!.run(input, outputBuffer);
-        debugPrint('run() completado!');
+        debugPrint('Despues de interpreter.run() - EXITO');
       } catch (e, st) {
         debugPrint('ERROR en run(): $e');
         debugPrint('Stack: $st');
@@ -165,39 +146,37 @@ class ModelService {
       }
       log += 'run() completado!\n';
 
-      log += 'Procesando $numDetections detecciones...\n';
+      log += 'Procesando $_numDetections detecciones...\n';
 
       final detections = <Detection>[];
       final outputData = outputBuffer[0];
 
-      for (int i = 0; i < numDetections; i++) {
-        final prediction = outputData[i];
+      for (int i = 0; i < _numDetections; i++) {
+        final pred = outputData[i];
+        
+        final confidence = pred[4].toDouble();
+        if (confidence < 0.3) continue;
+        
+        final classId = pred[5].toInt();
+        final classIdSafe = classId.clamp(0, _labels.length - 1);
 
-        final objScore = _sigmoid(prediction[4]);
-        if (objScore < 0.3) continue;
-
-        final classScores = prediction.sublist(5);
-        final maxScore = classScores.reduce((a, b) => a > b ? a : b);
-        final classIndex = classScores.indexOf(maxScore);
-        final confScore = _sigmoid(maxScore);
-
-        if (confScore < 0.3) continue;
-
-        final finalConfidence = objScore * confScore;
-
-        final cx = prediction[0];
-        final cy = prediction[1];
-        final w = prediction[2];
-        final h = prediction[3];
+        final cx = pred[0].toDouble();
+        final cy = pred[1].toDouble();
+        final w = pred[2].toDouble();
+        final h = pred[3].toDouble();
 
         detections.add(Detection(
-          label: classIndex.toString(),
-          confidence: finalConfidence,
+          label: classIdSafe.toString(),
+          confidence: confidence,
           x: cx - w / 2,
           y: cy - h / 2,
           width: w,
           height: h,
         ));
+
+        if (i < 3) {
+          log += '  Deteccion[$i]: conf=${confidence.toStringAsFixed(3)}, class=$classId, box=[$cx,$cy,$w,$h]\n';
+        }
       }
 
       log += 'Antes de NMS: ${detections.length} detecciones\n';
@@ -207,13 +186,16 @@ class ModelService {
 
       if (filtered.isNotEmpty) {
         for (var d in filtered.take(3)) {
-          log += '- ${d.label}: ${(d.confidence * 100).toStringAsFixed(1)}%\n';
+          final labelIdx = int.tryParse(d.label) ?? 0;
+          final labelName = labelIdx < _labels.length ? _labels[labelIdx] : d.label;
+          log += '- $labelName: ${(d.confidence * 100).toStringAsFixed(1)}%\n';
         }
       }
 
       return DetectionResult(detections: filtered, log: log);
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('Detection error: $e');
+      debugPrint('Stack: $st');
       return DetectionResult(detections: [], log: 'Error: $e');
     }
   }
@@ -243,29 +225,6 @@ class ModelService {
     return padded;
   }
 
-  static List<List<double>> _preprocessImage(img.Image image, int size) {
-    final input = List.generate(
-      3,
-      (_) => List.filled(size * size, 0.0),
-    );
-
-    for (int y = 0; y < size; y++) {
-      for (int x = 0; x < size; x++) {
-        final pixel = image.getPixel(x, y);
-        final idx = y * size + x;
-        input[0][idx] = pixel.r / 255.0;
-        input[1][idx] = pixel.g / 255.0;
-        input[2][idx] = pixel.b / 255.0;
-      }
-    }
-
-    return [
-      List<double>.from(input[0]),
-      List<double>.from(input[1]),
-      List<double>.from(input[2]),
-    ];
-  }
-
   static List<Detection> _nonMaxSuppression(
     List<Detection> detections,
     double iouThreshold,
@@ -287,7 +246,7 @@ class ModelService {
     final x1 = (a.x > b.x) ? a.x : b.x;
     final y1 = (a.y > b.y) ? a.y : b.y;
     final x2 = ((a.x + a.width) < (b.x + b.width)) ? (a.x + a.width) : (b.x + b.width);
-    final y2 = ((a.y + a.height) < (b.y + b.height)) ? (a.y + a.height) : (b.y + b.height);
+    final y2 = ((a.y + a.height) < (b.y + b.height)) ? (a.y + b.height) : (b.y + b.height);
 
     final intersection = (x2 - x1) * (y2 - y1);
     final union = a.width * a.height + b.width * b.height - intersection;

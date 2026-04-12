@@ -24,7 +24,14 @@ class ModelService {
   Future<void> loadModel() async {
     try {
       debugPrint('=== INICIANDO CARGA DE MODELO ===');
-      _interpreter = await Interpreter.fromAsset('assets/best_float32.tflite');
+      
+      final options = InterpreterOptions();
+      options.numThreads = 4;
+      
+      _interpreter = await Interpreter.fromAsset(
+        'assets/best_float32.tflite',
+        options: options,
+      );
       debugPrint('Modelo cargado desde asset');
       
       _interpreter!.allocateTensors();
@@ -79,6 +86,92 @@ class ModelService {
     }
   }
 
+  List<Detection> runInference(Float32List imageBytes, int width, int height) {
+    if (_interpreter == null || !_isLoaded) {
+      debugPrint('Modelo no cargado');
+      return [];
+    }
+
+    try {
+      debugPrint('=== INICIANDO INFERENCIA ===');
+      debugPrint('Input size: $_inputSize, numDetections: $_numDetections, numValues: $_numValues');
+      
+      final input = Float32List(_inputSize * _inputSize * 3);
+      
+      for (int y = 0; y < _inputSize; y++) {
+        for (int x = 0; x < _inputSize; x++) {
+          final origX = (x * width / _inputSize).clamp(0, width - 1).toInt();
+          final origY = (y * height / _inputSize).clamp(0, height - 1).toInt();
+          
+          final pixel = _getPixelClamped(imageBytes, width, height, origX, origY);
+          final idx = (y * _inputSize + x) * 3;
+          input[idx] = pixel[0];
+          input[idx + 1] = pixel[1];
+          input[idx + 2] = pixel[2];
+        }
+      }
+      
+      final output = Float32List(_numDetections * _numValues);
+      
+      debugPrint('Antes de run(): input shape: [1,$_inputSize,$_inputSize,3], output shape: [1,$_numDetections,$_numValues]');
+      
+      _interpreter!.run(input, output);
+      
+      debugPrint('Despues de run()');
+      
+      final detections = <Detection>[];
+      
+      for (int i = 0; i < _numDetections; i++) {
+        final base = i * _numValues;
+        
+        final confidence = output[base + 4].toDouble();
+        
+        if (confidence < 0.4) continue;
+        
+        final classId = output[base + 5].toInt();
+        final cx = output[base].toDouble();
+        final cy = output[base + 1].toDouble();
+        final w = output[base + 2].toDouble();
+        final h = output[base + 3].toDouble();
+        
+        detections.add(Detection(
+          label: classId.toString(),
+          confidence: confidence,
+          x: cx - w / 2,
+          y: cy - h / 2,
+          width: w,
+          height: h,
+        ));
+        
+        if (i < 3) {
+          debugPrint('Deteccion[$i]: conf=$confidence, class=$classId, box=[$cx,$cy,$w,$h]');
+        }
+      }
+      
+      debugPrint('Detecciones antes de NMS: ${detections.length}');
+      
+      final filtered = _nonMaxSuppression(detections, 0.5);
+      debugPrint('Detecciones despues de NMS: ${filtered.length}');
+      
+      return filtered;
+    } catch (e, st) {
+      debugPrint('ERROR en inferencia: $e');
+      debugPrint('Stack: $st');
+      return [];
+    }
+  }
+
+  List<double> _getPixelClamped(Float32List data, int width, int height, int x, int y) {
+    x = x.clamp(0, width - 1);
+    y = y.clamp(0, height - 1);
+    final idx = (y * width + x) * 3;
+    return [
+      data[idx].clamp(0.0, 1.0),
+      data[idx + 1].clamp(0.0, 1.0),
+      data[idx + 2].clamp(0.0, 1.0),
+    ];
+  }
+
   Future<DetectionResult> detectWithDebug(Uint8List imageBytes) async {
     if (_interpreter == null || !_isLoaded) {
       return DetectionResult(detections: [], log: 'Modelo no cargado');
@@ -112,32 +205,31 @@ class ModelService {
       final actualInputSize = expectedShape[1];
       final channels = expectedShape[3];
       
-      log += 'Creando input [1,$actualInputSize,$actualInputSize,$channels]\n';
+      log += 'Creando input [1,$actualInputSize,$actualInputSize,$channels] con Float32List\n';
+      debugPrint('Creando input con Float32List de tamano: ${actualInputSize * actualInputSize * channels}');
 
-      final input = List.generate(
-        actualInputSize,
-        (_) => List.generate(actualInputSize, (_) => List.filled(channels, 0.0)),
-      );
+      final input = Float32List(actualInputSize * actualInputSize * channels);
 
       for (int y = 0; y < actualInputSize; y++) {
         for (int x = 0; x < actualInputSize; x++) {
           final pixel = resized.getPixel(x, y);
-          input[y][x][0] = pixel.r / 255.0;
-          input[y][x][1] = pixel.g / 255.0;
-          input[y][x][2] = pixel.b / 255.0;
+          final idx = (y * actualInputSize + x) * channels;
+          input[idx] = pixel.r / 255.0;
+          input[idx + 1] = pixel.g / 255.0;
+          input[idx + 2] = pixel.b / 255.0;
         }
       }
       
-      log += 'Input[0,0]: [${input[0][0][0]}, ${input[0][0][1]}, ${input[0][0][2]}]\n';
-      debugPrint('Input[0,0]: ${input[0][0]}');
+      log += 'Input[0]: [${input[0]}, ${input[1]}, ${input[2]}]\n';
+      debugPrint('Input[0]: ${input[0]}, ${input[1]}, ${input[2]}');
 
-      final outputBuffer = List.filled(1, List.filled(_numDetections, List.filled(_numValues, 0.0)));
+      final output = Float32List(_numDetections * _numValues);
 
-      log += 'Output buffer: [1, $_numDetections, $_numValues]\n';
+      log += 'Output buffer: [1, $_numDetections, $_numValues] = ${output.length} floats\n';
 
       debugPrint('Antes de interpreter.run()');
       try {
-        _interpreter!.run(input, outputBuffer);
+        _interpreter!.run(input, output);
         debugPrint('Despues de interpreter.run() - EXITO');
       } catch (e, st) {
         debugPrint('ERROR en run(): $e');
@@ -149,21 +241,20 @@ class ModelService {
       log += 'Procesando $_numDetections detecciones...\n';
 
       final detections = <Detection>[];
-      final outputData = outputBuffer[0];
 
       for (int i = 0; i < _numDetections; i++) {
-        final pred = outputData[i];
+        final base = i * _numValues;
         
-        final confidence = pred[4].toDouble();
-        if (confidence < 0.3) continue;
+        final confidence = output[base + 4].toDouble();
+        if (confidence < 0.4) continue;
         
-        final classId = pred[5].toInt();
+        final classId = output[base + 5].toInt();
         final classIdSafe = classId.clamp(0, _labels.length - 1);
 
-        final cx = pred[0].toDouble();
-        final cy = pred[1].toDouble();
-        final w = pred[2].toDouble();
-        final h = pred[3].toDouble();
+        final cx = output[base].toDouble();
+        final cy = output[base + 1].toDouble();
+        final w = output[base + 2].toDouble();
+        final h = output[base + 3].toDouble();
 
         detections.add(Detection(
           label: classIdSafe.toString(),

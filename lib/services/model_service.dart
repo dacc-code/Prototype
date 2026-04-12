@@ -26,7 +26,7 @@ class ModelService {
       debugPrint('=== INICIANDO CARGA DE MODELO ===');
       
       final options = InterpreterOptions();
-      options.numThreads = 4;
+      options.threads = 4;
       
       _interpreter = await Interpreter.fromAsset(
         'assets/best_float32.tflite',

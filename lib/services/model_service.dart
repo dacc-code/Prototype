@@ -113,26 +113,32 @@ class ModelService {
       
       final output = Float32List(_numDetections * _numValues);
       
+      // Aseguramos la forma exacta que requiere el modelo usando reshape
+      final inputReshaped = input.reshape([1, _inputSize, _inputSize, 3]);
+      final outputReshaped = output.reshape([1, _numDetections, _numValues]);
+      
       debugPrint('Antes de run(): input shape: [1,$_inputSize,$_inputSize,3], output shape: [1,$_numDetections,$_numValues]');
       
-      _interpreter!.run(input, output);
+      // Ejecutamos inferencia evitando error de Failed Precondition
+      _interpreter!.run(inputReshaped, outputReshaped);
       
       debugPrint('Despues de run()');
       
       final detections = <Detection>[];
       
       for (int i = 0; i < _numDetections; i++) {
-        final base = i * _numValues;
+        // Mapeamos los resultados desde el tensor de salida (ya no es un array 1D)
+        final prediction = outputReshaped[0][i];
         
-        final confidence = output[base + 4].toDouble();
+        final confidence = prediction[4];
         
         if (confidence < 0.4) continue;
         
-        final classId = output[base + 5].toInt();
-        final cx = output[base].toDouble();
-        final cy = output[base + 1].toDouble();
-        final w = output[base + 2].toDouble();
-        final h = output[base + 3].toDouble();
+        final classId = prediction[5].toInt();
+        final cx = prediction[0];
+        final cy = prediction[1];
+        final w = prediction[2];
+        final h = prediction[3];
         
         detections.add(Detection(
           label: classId.toString(),
@@ -143,7 +149,11 @@ class ModelService {
           height: h,
         ));
         
-        if (i < 3) {
+        if (i == 0) { // Opcional: imprimir el score de la primera deteccion
+           debugPrint('--- PRIMERA DETECCION (Index $i) ---');
+           debugPrint('Score (Confidence): $confidence, ClassID: $classId');
+           debugPrint('Box: [$cx, $cy, $w, $h]');
+        } else if (i < 3) {
           debugPrint('Deteccion[$i]: conf=$confidence, class=$classId, box=[$cx,$cy,$w,$h]');
         }
       }
@@ -224,12 +234,16 @@ class ModelService {
       debugPrint('Input[0]: ${input[0]}, ${input[1]}, ${input[2]}');
 
       final output = Float32List(_numDetections * _numValues);
+      
+      // Aplicamos reshape al input y output para evitar el Failed Precondition
+      final inputReshaped = input.reshape([1, actualInputSize, actualInputSize, channels]);
+      final outputReshaped = output.reshape([1, _numDetections, _numValues]);
 
-      log += 'Output buffer: [1, $_numDetections, $_numValues] = ${output.length} floats\n';
+      log += 'Output buffer: [1, $_numDetections, $_numValues] formateado con reshape\n';
 
       debugPrint('Antes de interpreter.run()');
       try {
-        _interpreter!.run(input, output);
+        _interpreter!.run(inputReshaped, outputReshaped);
         debugPrint('Despues de interpreter.run() - EXITO');
       } catch (e, st) {
         debugPrint('ERROR en run(): $e');
@@ -243,18 +257,19 @@ class ModelService {
       final detections = <Detection>[];
 
       for (int i = 0; i < _numDetections; i++) {
-        final base = i * _numValues;
+        // Mapeamos los resultados desde el tensor reshaped [1, 300, 6]
+        final prediction = outputReshaped[0][i];
         
-        final confidence = output[base + 4].toDouble();
+        final confidence = prediction[4];
         if (confidence < 0.4) continue;
         
-        final classId = output[base + 5].toInt();
+        final classId = prediction[5].toInt();
         final classIdSafe = classId.clamp(0, _labels.length - 1);
 
-        final cx = output[base].toDouble();
-        final cy = output[base + 1].toDouble();
-        final w = output[base + 2].toDouble();
-        final h = output[base + 3].toDouble();
+        final cx = prediction[0];
+        final cy = prediction[1];
+        final w = prediction[2];
+        final h = prediction[3];
 
         detections.add(Detection(
           label: classIdSafe.toString(),
@@ -265,7 +280,10 @@ class ModelService {
           height: h,
         ));
 
-        if (i < 3) {
+        if (i == 0) { // Opcional: imprimir el score de la primera deteccion
+           log += '  [DETECT 0] Score=$confidence, ClassID=$classIdSafe\n';
+           debugPrint('Primera Deteccion Score: $confidence');
+        } else if (i < 3) {
           log += '  Deteccion[$i]: conf=${confidence.toStringAsFixed(3)}, class=$classId, box=[$cx,$cy,$w,$h]\n';
         }
       }

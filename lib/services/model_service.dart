@@ -151,12 +151,12 @@ class ModelService {
         ));
         
         if (i == 0) { // Opcional: imprimir el score de la primera deteccion
-           debugPrint('--- PRIMERA DETECCION (Index $i) ---');
-           debugPrint('Score (Confidence): $confidence, ClassID: $classId');
-           debugPrint('Box: [$cx, $cy, $w, $h]');
-        } else if (i < 3) {
-          debugPrint('Deteccion[$i]: conf=$confidence, class=$classId, box=[$cx,$cy,$w,$h]');
-        }
+            debugPrint('--- PRIMERA DETECCION (Index $i) ---');
+            debugPrint('Score (Confidence): $confidence, ClassID: $classId');
+            debugPrint('Box: [$ymin, $xmin, $ymax, $xmax]');
+         } else if (i < 3) {
+           debugPrint('Deteccion[$i]: conf=$confidence, class=$classId, box=[$ymin,$xmin,$ymax,$xmax]');
+         }
       }
       
       debugPrint('Detecciones antes de NMS: ${detections.length}');

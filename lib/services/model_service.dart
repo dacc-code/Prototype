@@ -133,7 +133,7 @@ class ModelService {
         
         final confidence = prediction[4].toDouble();
         
-        if (confidence < 0.3) continue;
+        if (confidence < 0.04) continue;
         
         final classId = prediction[5].toInt();
         final ymin = prediction[0].toDouble();
@@ -283,8 +283,8 @@ class ModelService {
 
         final confidence = prediction[4].toDouble();
         
-        // Umbral de confianza
-        if (confidence < 0.3) continue;
+        // Umbral de confianza adaptado a los niveles reales de probabilidad del modelo
+        if (confidence < 0.04) continue;
         
         final classId = prediction[5].toInt();
         final classIdSafe = classId.clamp(0, _labels.length - 1);

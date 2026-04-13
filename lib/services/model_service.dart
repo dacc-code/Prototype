@@ -141,8 +141,10 @@ class ModelService {
         final ymax = prediction[2].toDouble();
         final xmax = prediction[3].toDouble();
         
+        final labelName = _labels[classId.clamp(0, _labels.length - 1)];
+
         detections.add(Detection(
-          label: classId.toString(),
+          label: labelName,
           confidence: confidence,
           x: xmin,
           y: ymin,
@@ -201,6 +203,18 @@ class ModelService {
 
       final resized = _letterboxResize(image, _inputSize);
       log += 'Resize: ${resized.width}x${resized.height}\n';
+      
+      final aspectRatio = image.width / image.height;
+      int paddedWidth, paddedHeight;
+      if (aspectRatio > 1) {
+        paddedWidth = _inputSize;
+        paddedHeight = (_inputSize / aspectRatio).round();
+      } else {
+        paddedHeight = _inputSize;
+        paddedWidth = (_inputSize * aspectRatio).round();
+      }
+      final double padX = _inputSize > paddedWidth ? (_inputSize - paddedWidth) / 2.0 : 0.0;
+      final double padY = _inputSize > paddedHeight ? (_inputSize - paddedHeight) / 2.0 : 0.0;
       
       final inputTensors = _interpreter!.getInputTensors();
       final expectedShape = inputTensors[0].shape;
@@ -280,13 +294,26 @@ class ModelService {
         final ymax = prediction[2].toDouble();
         final xmax = prediction[3].toDouble();
 
+        // Revertir el padding del letterboxing para coordenadas normalizadas en la imagen original
+        final absXmin = xmin * _inputSize;
+        final absYmin = ymin * _inputSize;
+        final absXmax = xmax * _inputSize;
+        final absYmax = ymax * _inputSize;
+
+        final origXmin = ((absXmin - padX) / paddedWidth).clamp(0.0, 1.0);
+        final origXmax = ((absXmax - padX) / paddedWidth).clamp(0.0, 1.0);
+        final origYmin = ((absYmin - padY) / paddedHeight).clamp(0.0, 1.0);
+        final origYmax = ((absYmax - padY) / paddedHeight).clamp(0.0, 1.0);
+
+        final labelName = _labels[classIdSafe];
+
         detections.add(Detection(
-          label: classIdSafe.toString(),
+          label: labelName,
           confidence: confidence,
-          x: xmin,
-          y: ymin,
-          width: xmax - xmin,
-          height: ymax - ymin,
+          x: origXmin,
+          y: origYmin,
+          width: origXmax - origXmin,
+          height: origYmax - origYmin,
         ));
 
         if (i < 3) {

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/detection.dart';
 import '../services/api_service.dart';
+import '../widgets/bounding_box.dart';
 
 class ResultScreen extends StatefulWidget {
   final List<Detection> detections;
@@ -42,14 +43,31 @@ class _ResultScreenState extends State<ResultScreen> {
         children: [
           if (widget.imageBase64 != null)
             Container(
-              height: 200,
-              width: double.infinity,
               margin: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                image: DecorationImage(
-                  image: MemoryImage(base64Decode(widget.imageBase64!)),
-                  fit: BoxFit.cover,
+                color: Colors.black12,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 320),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Image.memory(
+                        base64Decode(widget.imageBase64!),
+                        fit: BoxFit.contain,
+                      ),
+                      Positioned.fill(
+                        child: BoundingBoxWidget(
+                          detections: widget.detections,
+                          imageWidth: 1,
+                          imageHeight: 1,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

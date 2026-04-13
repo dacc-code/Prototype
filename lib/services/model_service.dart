@@ -260,8 +260,16 @@ class ModelService {
         // Mapeamos los resultados desde el tensor reshaped [1, 300, 6]
         final prediction = outputReshaped[0][i];
         
+        if (i < 3) {
+            final raw = prediction.map((e) => e.toStringAsFixed(4)).toList();
+            log += 'Raw[$i] = $raw\n';
+            debugPrint('Raw[$i] = $raw');
+        }
+
         final confidence = prediction[4];
-        if (confidence < 0.4) continue;
+        
+        // temporalmente dejamos pasar si confidence > 0.001 en lugar de 0.4 para ver qué pasa con la baja confianza
+        if (confidence < 0.001) continue;
         
         final classId = prediction[5].toInt();
         final classIdSafe = classId.clamp(0, _labels.length - 1);
@@ -280,11 +288,8 @@ class ModelService {
           height: h,
         ));
 
-        if (i == 0) { // Opcional: imprimir el score de la primera deteccion
-           log += '  [DETECT 0] Score=$confidence, ClassID=$classIdSafe\n';
-           debugPrint('Primera Deteccion Score: $confidence');
-        } else if (i < 3) {
-          log += '  Deteccion[$i]: conf=${confidence.toStringAsFixed(3)}, class=$classId, box=[$cx,$cy,$w,$h]\n';
+        if (i < 3) {
+           log += '  [DETECT $i] Score=$confidence, ClassID=$classIdSafe\n';
         }
       }
 

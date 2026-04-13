@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter_custom/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
@@ -130,23 +131,23 @@ class ModelService {
         // Mapeamos los resultados desde el tensor de salida (ya no es un array 1D)
         final prediction = outputReshaped[0][i];
         
-        final confidence = prediction[4];
+        final confidence = _sigmoid(prediction[4].toDouble());
         
-        if (confidence < 0.4) continue;
+        if (confidence < 0.3) continue;
         
         final classId = prediction[5].toInt();
-        final cx = prediction[0];
-        final cy = prediction[1];
-        final w = prediction[2];
-        final h = prediction[3];
+        final ymin = prediction[0].toDouble();
+        final xmin = prediction[1].toDouble();
+        final ymax = prediction[2].toDouble();
+        final xmax = prediction[3].toDouble();
         
         detections.add(Detection(
           label: classId.toString(),
           confidence: confidence,
-          x: cx - w / 2,
-          y: cy - h / 2,
-          width: w,
-          height: h,
+          x: xmin,
+          y: ymin,
+          width: xmax - xmin,
+          height: ymax - ymin,
         ));
         
         if (i == 0) { // Opcional: imprimir el score de la primera deteccion
@@ -266,7 +267,7 @@ class ModelService {
             debugPrint('Raw[$i] = $raw');
         }
 
-        final confidence = prediction[4];
+        final confidence = _sigmoid(prediction[4].toDouble());
         
         // Umbral de confianza
         if (confidence < 0.3) continue;
@@ -274,18 +275,18 @@ class ModelService {
         final classId = prediction[5].toInt();
         final classIdSafe = classId.clamp(0, _labels.length - 1);
 
-        final cx = prediction[0];
-        final cy = prediction[1];
-        final w = prediction[2];
-        final h = prediction[3];
+        final ymin = prediction[0].toDouble();
+        final xmin = prediction[1].toDouble();
+        final ymax = prediction[2].toDouble();
+        final xmax = prediction[3].toDouble();
 
         detections.add(Detection(
           label: classIdSafe.toString(),
           confidence: confidence,
-          x: cx - w / 2,
-          y: cy - h / 2,
-          width: w,
-          height: h,
+          x: xmin,
+          y: ymin,
+          width: xmax - xmin,
+          height: ymax - ymin,
         ));
 
         if (i < 3) {
@@ -371,6 +372,10 @@ class ModelService {
     final union = a.width * a.height + b.width * b.height - intersection;
 
     return (intersection / union).clamp(0.0, 1.0);
+  }
+
+  static double _sigmoid(double x) {
+    return 1.0 / (1.0 + exp(-x));
   }
 
   void dispose() {

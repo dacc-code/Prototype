@@ -54,45 +54,53 @@ class _ResultScreenState extends State<ResultScreen> {
               ),
             ),
           if (_showDebug && widget.debugLog != null && widget.debugLog!.isNotEmpty)
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green.withOpacity(0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.terminal, color: Colors.green, size: 18),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Proceso de Detección',
-                        style: TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+            Expanded(
+              flex: 1,
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.terminal, color: Colors.green, size: 18),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Proceso de Detección',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(color: Colors.green),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: SelectableText(
+                          widget.debugLog!,
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontSize: 12,
+                            fontFamily: 'monospace',
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                  const Divider(color: Colors.green),
-                  Text(
-                    widget.debugLog!,
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 12,
-                      fontFamily: 'monospace',
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           Expanded(
+            flex: 2,
             child: widget.detections.isEmpty
                 ? const Center(
                     child: Text('No se detectaron enfermedades'),

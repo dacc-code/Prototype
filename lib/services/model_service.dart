@@ -268,8 +268,8 @@ class ModelService {
 
         final confidence = prediction[4];
         
-        // temporalmente dejamos pasar si confidence > 0.001 en lugar de 0.4 para ver qué pasa con la baja confianza
-        if (confidence < 0.001) continue;
+        // Umbral de confianza
+        if (confidence < 0.3) continue;
         
         final classId = prediction[5].toInt();
         final classIdSafe = classId.clamp(0, _labels.length - 1);
@@ -360,9 +360,14 @@ class ModelService {
     final x1 = (a.x > b.x) ? a.x : b.x;
     final y1 = (a.y > b.y) ? a.y : b.y;
     final x2 = ((a.x + a.width) < (b.x + b.width)) ? (a.x + a.width) : (b.x + b.width);
-    final y2 = ((a.y + a.height) < (b.y + b.height)) ? (a.y + b.height) : (b.y + b.height);
+    final y2 = ((a.y + a.height) < (b.y + b.height)) ? (a.y + a.height) : (b.y + b.height);
 
-    final intersection = (x2 - x1) * (y2 - y1);
+    final interW = x2 - x1;
+    final interH = y2 - y1;
+    
+    if (interW <= 0 || interH <= 0) return 0.0;
+
+    final intersection = interW * interH;
     final union = a.width * a.height + b.width * b.height - intersection;
 
     return (intersection / union).clamp(0.0, 1.0);

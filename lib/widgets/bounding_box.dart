@@ -102,18 +102,25 @@ class BoundingBoxPainter extends CustomPainter {
 
   Color _getColorForLabel(String label) {
     switch (label) {
-      case 'healthy':
-        return Colors.green;
-      case 'leaf_spot':
-        return Colors.orange;
-      case 'root_rot':
-        return Colors.red;
-      case 'yellow_leaf':
-        return Colors.yellow.shade700;
-      case 'brown_spots':
-        return Colors.brown;
-      case 'leaf_blight':
-        return Colors.deepPurple;
+      case 'Dieback-Gall':
+        return Colors.red.shade700;
+      case 'Lumnitzera-Littorea':
+      case 'Rhizophora-Apiculata':
+      case 'Scyphiphora-Hydrophyllacea':
+      case 'Sonneratia-Alba':
+        return Colors.green.shade600;
+      case 'Lumnitzera-Littorea-Flower':
+      case 'Scyphiphora-Hydrophyllacea-Flower':
+      case 'Sonneratia-Alba-Flower':
+        return Colors.pink.shade300;
+      case 'Rhizophora-Apiculata-Propagule':
+        return Colors.orange.shade400;
+      case 'Black Spots':
+        return Colors.black87;
+      case 'Brown Spots':
+        return Colors.brown.shade700;
+      case 'White Spots':
+        return Colors.grey.shade300;
       default:
         return Colors.blue;
     }

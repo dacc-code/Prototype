@@ -131,7 +131,7 @@ class ModelService {
         // Mapeamos los resultados desde el tensor de salida (ya no es un array 1D)
         final prediction = outputReshaped[0][i];
         
-        final confidence = _sigmoid(prediction[4].toDouble());
+        final confidence = prediction[4].toDouble();
         
         if (confidence < 0.3) continue;
         
@@ -281,7 +281,7 @@ class ModelService {
             debugPrint('Raw[$i] = $raw');
         }
 
-        final confidence = _sigmoid(prediction[4].toDouble());
+        final confidence = prediction[4].toDouble();
         
         // Umbral de confianza
         if (confidence < 0.3) continue;

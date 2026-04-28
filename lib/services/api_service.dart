@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/detection.dart';
 
 class ApiService {
-  static const String _baseUrl = 'http://10.0.2.2:5000/api';
+  static const String _baseUrl = 'https://iot-backend-1-3rru.onrender.com/api';
 
   static Future<bool> sendDetection(Detection detection, String imageBase64) async {
     try {

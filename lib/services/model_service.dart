@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter_custom/tflite_flutter.dart';

@@ -64,7 +64,8 @@ class BoundingBoxPainter extends CustomPainter {
       canvas.drawRect(rect, paint);
 
       final diseaseInfo = DiseaseInfo.getInfo(detection.label);
-      final label = '${diseaseInfo.name} ${(detection.confidence * 100).toStringAsFixed(1)}%';
+      final label =
+          '${diseaseInfo.name} ${(detection.confidence * 100).toStringAsFixed(1)}%';
 
       final textPainter = TextPainter(
         text: TextSpan(
@@ -79,7 +80,7 @@ class BoundingBoxPainter extends CustomPainter {
       );
 
       textPainter.layout();
-      final padding = 4.0;
+      const padding = 4.0;
       final labelRect = Rect.fromLTWH(
         rect.left,
         rect.top - textPainter.height - padding * 2,
@@ -96,7 +97,8 @@ class BoundingBoxPainter extends CustomPainter {
         bgPaint,
       );
 
-      textPainter.paint(canvas, Offset(rect.left + padding, rect.top - textPainter.height - padding));
+      textPainter.paint(canvas,
+          Offset(rect.left + padding, rect.top - textPainter.height - padding));
     }
   }
 

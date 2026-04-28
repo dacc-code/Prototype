@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/model_service.dart';
@@ -17,7 +16,7 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> {
   final ModelService _modelService = ModelService();
   final ImagePicker _imagePicker = ImagePicker();
-  
+
   bool _isLoading = true;
   String? _error;
   List<Detection> _detections = [];
@@ -52,20 +51,20 @@ class _CameraScreenState extends State<CameraScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF1B5E20),
+      return const Scaffold(
+        backgroundColor: Color(0xFF1B5E20),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(color: Colors.white),
-              const SizedBox(height: 20),
-              const Text(
+              CircularProgressIndicator(color: Colors.white),
+              SizedBox(height: 20),
+              Text(
                 'Cargando...',
                 style: TextStyle(color: Colors.white, fontSize: 18),
               ),
-              const SizedBox(height: 10),
-              const Text(
+              SizedBox(height: 10),
+              Text(
                 'Cargando modelo IA...',
                 style: TextStyle(color: Colors.white70, fontSize: 14),
               ),
@@ -115,7 +114,8 @@ class _CameraScreenState extends State<CameraScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(_showDebug ? Icons.info : Icons.info_outline, color: Colors.white),
+            icon: Icon(_showDebug ? Icons.info : Icons.info_outline,
+                color: Colors.white),
             onPressed: () => setState(() => _showDebug = !_showDebug),
             tooltip: 'Ver logs de debug',
           ),
@@ -297,7 +297,8 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _pickImageFromGallery() async {
     try {
-      final XFile? image = await _imagePicker.pickImage(source: ImageSource.gallery);
+      final XFile? image =
+          await _imagePicker.pickImage(source: ImageSource.gallery);
       if (image != null) {
         await _processImage(image.path);
       }
@@ -312,7 +313,8 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _takePhoto() async {
     try {
-      final XFile? image = await _imagePicker.pickImage(source: ImageSource.camera);
+      final XFile? image =
+          await _imagePicker.pickImage(source: ImageSource.camera);
       if (image != null) {
         await _processImage(image.path);
       }
@@ -329,14 +331,14 @@ class _CameraScreenState extends State<CameraScreen> {
     try {
       final bytes = await File(path).readAsBytes();
       final base64Image = base64Encode(bytes);
-      
+
       setState(() {
         _isLoading = true;
         _debugLog = 'Procesando imagen...\n';
       });
 
       final result = await _modelService.detectWithDebug(bytes);
-      
+
       if (mounted) {
         setState(() {
           _detections = result.detections;
@@ -344,7 +346,7 @@ class _CameraScreenState extends State<CameraScreen> {
           _isLoading = false;
           _debugLog = result.log;
         });
-        
+
         _showResults();
       }
     } catch (e) {

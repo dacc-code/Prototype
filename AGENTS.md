@@ -53,5 +53,5 @@ flutter run
 - The app is configured for Spanish UI
 
 ## CI/CD
-- GitHub Actions workflow builds APK automatically on push to main
-- Workflow file: `.github/workflows/flutter.yml`
+- GitHub Actions: `build_apk.yml` (APK release en push a main) + `ci.yml` (pub get + analyze en push/PR).
+- Solo errores bloquean `ci.yml` (`--no-fatal-warnings`): ver TODO _sigmoid en el PR #2.

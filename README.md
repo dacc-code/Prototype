@@ -1,5 +1,10 @@
 # Manglares - Detector de Enfermedades
 
+![Flutter](https://img.shields.io/badge/flutter-3.x-blue.svg?style=flat&logo=flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/dart-3.x-teal.svg?style=flat&logo=dart&logoColor=white)
+![YOLO](https://img.shields.io/badge/YOLO-TFLite-green.svg?style=flat)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 Aplicación Flutter para detección de enfermedades y especies de manglares usando YOLO en tiempo real.
 
 ## Requisitos
@@ -12,8 +17,8 @@ Aplicación Flutter para detección de enfermedades y especies de manglares usan
 
 1. **Clonar el proyecto**
 ```bash
-git clone <repo-url>
-cd mangrove_disease_detector
+git clone https://github.com/dacc-code/Prototype.git
+cd Prototype
 ```
 
 2. **Instalar dependencias**
@@ -78,9 +83,8 @@ lib/
 
 ## Características
 
-- Detección en tiempo real con YOLO
+- Detección en tiempo real con YOLO (umbral de confianza 0.04 + NMS, ver `lib/services/model_service.dart`)
 - Bounding boxes con CustomPainter
-- Optimizado con isolates para rendimiento
 - UI en español
 - Información de enfermedades y recomendaciones
 - Envío de detecciones a API externa
@@ -101,4 +105,11 @@ final labels = ['Dieback-Gall', 'Lumnitzera-Littorea', ...];
 
 ## Licencia
 
-MIT License
+MIT — ver [LICENSE](LICENSE).
+
+## Notas para reclutadores / TODO
+
+- TODO: el test actual (`test/widget_test.dart`) es la plantilla contador de Flutter, no prueba la app; el CI solo compila el APK.
+- TODO: la URL del backend (`api_service.dart`) está fija a producción; mover a configuración (`--dart-define` o env).
+- TODO: el modelo `assets/best_float32.tflite` (~10 MB) está commiteado en el repo; evaluar Git LFS.
+- TODO: agregar screenshots/demo del APK.

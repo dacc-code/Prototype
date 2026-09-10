@@ -45,7 +45,7 @@ flutter run
 - Inference: `_interpreter!.run(inputBuffer.buffer, outputBuffer.buffer)`
 - Usar letterbox resize (mantener aspect ratio, padding gris 128,128,128)
 - Aplicar sigmoid a objectness score y class scores
-- Threshold: 0.3 confidence, 0.5 NMS IOU
+- Threshold: 0.04 confidence (verificado en `model_service.dart`, 2 sitios), 0.5 NMS IOU
 
 ## Important Notes
 - Model labels are defined in `lib/models/detection.dart` - update there to change detected disease names

@@ -1,11 +1,30 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/detection.dart';
+import 'auth_service.dart';
+
+/// Resultado detallado del envio al dashboard (para mostrar en UI).
+class SendResult {
+  final bool ok;
+  final String message;
+  final String imageUrl;
+  const SendResult({required this.ok, required this.message, this.imageUrl = ''});
+}
 
 class ApiService {
   static const String _baseUrl = 'https://iot-backend-1-3rru.onrender.com/api';
 
-  static Future<bool> sendDetection(Detection detection, String imageBase64) async {
+  /// Envia una deteccion al backend (POST /api/detections, requiere JWT).
+  /// Toma el token de [AuthService.instance]; si no hay sesion devuelve
+  /// ok=false con mensaje que invita a iniciar sesion (el servidor daria 401).
+  static Future<SendResult> sendDetection(
+      Detection detection, String imageBase64) async {
+    final token = AuthService.instance.token;
+    if (token == null || token.isEmpty) {
+      return const SendResult(
+          ok: false, message: 'Inicia sesión para enviar al dashboard.');
+    }
+
     try {
       final payload = {
         'label': detection.label,
@@ -15,16 +34,46 @@ class ApiService {
         'image_base64': imageBase64,
       };
 
-      final response = await http.post(
-        Uri.parse('$_baseUrl/detections'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(payload),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/detections'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 60));
 
-      return response.statusCode == 200 || response.statusCode == 201;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        String imageUrl = '';
+        try {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          imageUrl = (data['image_url'] ?? '').toString();
+          final uploadError = (data['upload_error'] ?? '').toString();
+          if (uploadError.isNotEmpty) {
+            return SendResult(
+                ok: true,
+                message: 'Registrado, pero la imagen no se subió: $uploadError',
+                imageUrl: imageUrl);
+          }
+        } catch (_) {}
+        return SendResult(
+            ok: true, message: 'Detección enviada al dashboard.', imageUrl: imageUrl);
+      }
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        return const SendResult(
+            ok: false,
+            message: 'Sesión vencida. Vuelve a iniciar sesión.');
+      }
+      String detail = 'Error ${response.statusCode} del servidor.';
+      try {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        detail = (data['detail'] ?? detail).toString();
+      } catch (_) {}
+      return SendResult(ok: false, message: detail);
     } catch (e) {
-      print('Error sending detection: $e');
-      return false;
+      return SendResult(ok: false, message: 'Sin conexión: $e');
     }
   }
 

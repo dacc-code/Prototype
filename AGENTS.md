@@ -30,22 +30,19 @@ flutter run
 - Build APK: `flutter build apk --debug`
 
 ## Model Details (IMPORTANT)
-- **Modelo**: YOLO con 12 clases (no estándar 80)
-- **Input size**: 416x416
-- **Output shape**: [1, 25200, 85] - 25200 detecciones, 85 valores (4 coords + 1 objectness + 80 classes, pero solo 12 usadas)
+- **Modelo**: YOLO exportado a TFLite float32 con NMS incluido (`assets/best_float32.tflite`), 12 clases
+- **Input size**: auto-detectado del tensor (default 640x640 si falla la lectura; NO asumir 416)
+- **Output shape**: auto-detectado, formato decodificado `[1, N, 6] = [ymin, xmin, ymax, xmax, confidence, classId]` (ej. `[1, 300, 6]`). NO es YOLO crudo `[1, 25200, 85]`.
 - **Labels**: Dieback-Gall, Lumnitzera-Littorea, Lumnitzera-Littorea-Flower, Rhizophora-Apiculata, Rhizophora-Apiculata-Propagule, Scyphiphora-Hydrophyllacea, Scyphiphora-Hydrophyllacea-Flower, Sonneratia-Alba, Sonneratia-Alba-Flower, Black Spots, Brown Spots, White Spots
-- **Post-processing**: Require sigmoid activation on scores and NMS (Non-Maximum Suppression)
+- **Post-processing**: scores ya vienen como probabilidad (NO aplicar sigmoid), solo umbral + NMS manual
 
 ## Critical Implementation Notes
 - **NO usar isolate para inference**: `Interpreter.fromAsset()` retorna `Future<Interpreter>`, no se puede usar en isolate. Hacer inference directamente en el hilo principal después de cargar el modelo con `await`.
-- **Usar TensorBuffer para input/output**: NO usar listas de Dart directamente. Usar `TensorBuffer.createFixedSize()` con el shape correcto del modelo. El error "bad state: failed precondition" se debe a formato de tensor incorrecto.
-- Cargar modelo en `loadModel()` con `await Interpreter.fromAsset('assets/best_float32.tflite')`
-- Input: `TensorBuffer.createFixedSize([1, 3, 416, 416], TfLiteType.float32)`
-- Output: `TensorBuffer.createFixedSize([1, 25200, 85], TfLiteType.float32)`
-- Inference: `_interpreter!.run(inputBuffer.buffer, outputBuffer.buffer)`
-- Usar letterbox resize (mantener aspect ratio, padding gris 128,128,128)
-- Aplicar sigmoid a objectness score y class scores
-- Threshold: 0.04 confidence (verificado en `model_service.dart`, 2 sitios), 0.5 NMS IOU
+- **Usar Float32List + reshape**: input `Float32List(H*H*3)` normalizado `/255` con `.reshape([1, H, H, 3])`, output `.reshape([1, N, 6])`. El error "bad state: failed precondition" se debe a forma de tensor incorrecta (por eso el reshape).
+- Cargar modelo en `loadModel()` con `await Interpreter.fromAsset('assets/best_float32.tflite')` + `allocateTensors()`, luego leer `getInputTensors()[0].shape` y `getOutputTensors()[0].shape` (no hardcodear).
+- Usar letterbox resize (mantener aspect ratio, padding gris 128,128,128) y revertir el padding al mapear boxes a la imagen original.
+- NO hay `_sigmoid` en el path activo (era de un export YOLO crudo anterior; se elimino por no usarse tras verificar que los scores ya vienen como probabilidad).
+- Threshold: 0.04 confidence, 0.5 NMS IOU
 
 ## Important Notes
 - Model labels are defined in `lib/models/detection.dart` - update there to change detected disease names
@@ -54,4 +51,4 @@ flutter run
 
 ## CI/CD
 - GitHub Actions: `build_apk.yml` (APK release en push a main) + `ci.yml` (pub get + analyze en push/PR).
-- Solo errores bloquean `ci.yml` (`--no-fatal-warnings`): ver TODO _sigmoid en el PR #2.
+- Solo errores bloquean `ci.yml` (`--no-fatal-warnings --no-fatal-infos`).

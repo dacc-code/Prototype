@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/detection.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import '../widgets/bounding_box.dart';
+import 'login_screen.dart';
 
 class ResultScreen extends StatefulWidget {
   final List<Detection> detections;
@@ -313,7 +315,7 @@ class _ResultScreenState extends State<ResultScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: _sent ? null : _sendToApi,
+                    onPressed: (_sent || _isSending) ? null : _sendToApi,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1B5E20),
                       foregroundColor: Colors.white,
@@ -322,8 +324,19 @@ class _ResultScreenState extends State<ResultScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    icon: Icon(_sent ? Icons.check : Icons.cloud_upload),
-                    label: Text(_sent ? 'Enviado' : 'Enviar al Dashboard'),
+                    icon: _isSending
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : Icon(_sent ? Icons.check : Icons.cloud_upload),
+                    label: Text(_sent
+                        ? 'Enviado al Dashboard'
+                        : _isSending
+                            ? 'Enviando...'
+                            : 'Enviar al Dashboard'),
                   ),
                 ),
               ],
@@ -367,20 +380,51 @@ class _ResultScreenState extends State<ResultScreen> {
   Future<void> _sendToApi() async {
     if (_sent || _isSending) return;
 
+    // Sin sesion no hay JWT y el backend responde 401: pedir login primero.
+    if (!AuthService.instance.isLoggedIn) {
+      final ok = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+      if (ok != true) {
+        setState(() => _sendError =
+            'Inicia sesión para enviar al dashboard.');
+        return;
+      }
+      setState(() {});
+    }
+
     setState(() {
       _isSending = true;
       _sendError = null;
     });
 
     try {
+      int okCount = 0;
+      String? firstError;
       for (final detection in widget.detections) {
-        await ApiService.sendDetection(detection, widget.imageBase64 ?? '');
+        final res = await ApiService.sendDetection(
+            detection, widget.imageBase64 ?? '');
+        if (res.ok) {
+          okCount++;
+        } else {
+          firstError ??= res.message;
+        }
       }
+      if (!mounted) return;
       setState(() {
-        _sent = true;
         _isSending = false;
+        if (okCount == widget.detections.length) {
+          _sent = true;
+        } else if (okCount > 0) {
+          _sendError =
+              'Se enviaron $okCount de ${widget.detections.length}. Último error: $firstError';
+        } else {
+          _sendError = firstError ?? 'No se pudo enviar.';
+        }
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _sendError = 'Error al enviar: $e';
         _isSending = false;

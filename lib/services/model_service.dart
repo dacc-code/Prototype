@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter_custom/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
@@ -327,9 +326,8 @@ class ModelService {
 
       if (filtered.isNotEmpty) {
         for (var d in filtered.take(3)) {
-          final labelIdx = int.tryParse(d.label) ?? 0;
-          final labelName = labelIdx < _labels.length ? _labels[labelIdx] : d.label;
-          log += '- $labelName: ${(d.confidence * 100).toStringAsFixed(1)}%\n';
+          // d.label ya es el nombre (ej. "Black Spots"), no el indice numerico.
+          log += '- ${d.label}: ${(d.confidence * 100).toStringAsFixed(1)}%\n';
         }
       }
 
@@ -398,10 +396,6 @@ class ModelService {
     final union = a.width * a.height + b.width * b.height - intersection;
 
     return (intersection / union).clamp(0.0, 1.0);
-  }
-
-  static double _sigmoid(double x) {
-    return 1.0 / (1.0 + exp(-x));
   }
 
   void dispose() {

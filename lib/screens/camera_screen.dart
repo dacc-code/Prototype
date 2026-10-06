@@ -297,8 +297,14 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _pickImageFromGallery() async {
     try {
-      final XFile? image =
-          await _imagePicker.pickImage(source: ImageSource.gallery);
+      // Compresion en nativo (Android e iOS): baja de ~5MB a ~300KB para que
+      // el base64 no rompa el POST a Render ni el limite de Supabase Storage.
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 85,
+      );
       if (image != null) {
         await _processImage(image.path);
       }
@@ -313,8 +319,13 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _takePhoto() async {
     try {
-      final XFile? image =
-          await _imagePicker.pickImage(source: ImageSource.camera);
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 85,
+        preferredCameraDevice: CameraDevice.rear,
+      );
       if (image != null) {
         await _processImage(image.path);
       }

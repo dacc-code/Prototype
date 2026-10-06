@@ -1,11 +1,60 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 import 'camera_screen.dart';
+import 'login_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _sessionLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    AuthService.instance.load().then((_) {
+      if (mounted) setState(() => _sessionLoading = false);
+    });
+  }
+
+  Future<void> _openSession() async {
+    if (AuthService.instance.isLoggedIn) {
+      final logout = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: const Text('Sesión activa'),
+          content: Text(
+              'Conectado como ${AuthService.instance.correo ?? ''}.\n¿Cerrar sesión?'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(c, false),
+                child: const Text('Cancelar')),
+            TextButton(
+                onPressed: () => Navigator.pop(c, true),
+                child: const Text('Cerrar sesión')),
+          ],
+        ),
+      );
+      if (logout == true) {
+        await AuthService.instance.logout();
+        setState(() {});
+      }
+      return;
+    }
+    final ok = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+    if (ok == true) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final logged = AuthService.instance.isLoggedIn;
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -22,6 +71,38 @@ class HomeScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
+              // Estado de sesion con el backend (necesario para "Enviar al Dashboard").
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (_sessionLoading)
+                      const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white70),
+                      )
+                    else
+                      TextButton.icon(
+                        onPressed: _openSession,
+                        icon: Icon(
+                          logged ? Icons.cloud_done : Icons.cloud_off,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        label: Text(
+                          logged
+                              ? (AuthService.instance.correo ?? 'Conectado')
+                              : 'Conectar backend',
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 12),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.all(30),
@@ -73,13 +154,15 @@ class HomeScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const CameraScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const CameraScreen()),
                     );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF1B5E20),
-                    padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 18),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 60, vertical: 18),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
@@ -135,13 +218,13 @@ class HomeScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('1. Apunta la cámara hacia una hoja de mangle'),
+            Text('1. Conecta tu cuenta del dashboard (arriba a la derecha)'),
             SizedBox(height: 10),
-            Text('2. La app analizará la imagen en tiempo real'),
+            Text('2. Apunta la cámara hacia una hoja de mangle'),
             SizedBox(height: 10),
-            Text('3. Verás bounding boxes sobre las áreas detectadas'),
+            Text('3. La app analizará la imagen con IA en el dispositivo'),
             SizedBox(height: 10),
-            Text('4. Recibirás información sobre enfermedades detectadas'),
+            Text('4. Pulsa "Enviar al Dashboard" para verla en la web'),
             SizedBox(height: 10),
             Text('5. Sigue las recomendaciones para el tratamiento'),
           ],
